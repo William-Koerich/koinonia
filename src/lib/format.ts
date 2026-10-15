@@ -132,6 +132,13 @@ export function formatarCelular(valor: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+/** Telefone completo para exibição: (47) 3308-9872 (fixo) ou (47) 99999-9999 (celular) */
+export function formatarTelefone(valor: string): string {
+  const d = somenteDigitos(valor);
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return formatarCelular(d);
+}
+
 /** 99999-999 — aceita entrada parcial */
 export function formatarCep(valor: string): string {
   const d = somenteDigitos(valor).slice(0, 8);

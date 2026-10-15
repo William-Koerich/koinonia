@@ -5,7 +5,7 @@ import { PageHero, Section } from "@/components/site/section";
 import { Rotulo } from "@/components/site/tela";
 import { linkWhatsApp } from "@/components/site/whatsapp";
 import { siteConfig } from "@/config/site";
-import { formatarCelular } from "@/lib/format";
+import { formatarTelefone } from "@/lib/format";
 import { imagens } from "@/lib/imagens";
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function ContatoPage() {
   const { endereco, contato, redes } = siteConfig;
   // wa.me usa DDI + número; para exibir, tiramos o 55
-  const whatsappExibicao = formatarCelular(contato.whatsapp.replace(/^55/, ""));
+  const whatsappExibicao = formatarTelefone(contato.whatsapp.replace(/^55/, ""));
 
   return (
     <>

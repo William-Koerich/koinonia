@@ -24,7 +24,7 @@ export const siteConfig = {
   // URL de embed do Google Maps (Compartilhar → Incorporar um mapa)
   mapaEmbedUrl: "https://www.google.com/maps?q=Rua+Alfredo+Hering,+98,+Itoupava+Seca,+Blumenau+-+SC,+89030-410&output=embed",
   contato: {
-    whatsapp: "5511999999999", // TODO: número real — só dígitos, com DDI
+    whatsapp: "554733089872", // só dígitos, com DDI (55) e DDD
     email: "contato@igrejakoinonia.com.br", // TODO: e-mail real
   },
   redes: {
