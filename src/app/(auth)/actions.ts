@@ -23,8 +23,18 @@ import { perfilSchema, type PerfilInput } from "@/lib/validation/perfil";
 // Cadastro público: toda conta nova entra como MEMBRO (garantido no banco).
 // ADMIN/PASTOR liberam os demais acessos na área logada.
 
+/**
+ * Endereço do site para os links enviados por e-mail: o domínio por onde a
+ * pessoa está acessando (Origin, ou o host repassado pela Vercel). O Supabase
+ * só aceita esse endereço se ele estiver nas "Redirect URLs" do projeto.
+ */
 async function origem(): Promise<string> {
-  return (await headers()).get("origin") ?? siteConfig.url;
+  const h = await headers();
+  const origin = h.get("origin");
+  if (origin) return origin;
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) return `${h.get("x-forwarded-proto") ?? "https"}://${host}`;
+  return siteConfig.url;
 }
 
 export async function entrar(input: EntrarInput, next?: string): Promise<ActionResult> {

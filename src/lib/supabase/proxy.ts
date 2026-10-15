@@ -33,7 +33,20 @@ export async function updateSession(request: NextRequest) {
   // token é validado e, se preciso, renovado.
   const { data } = await supabase.auth.getClaims();
   const logado = Boolean(data?.claims);
-  const { pathname, search } = request.nextUrl;
+  const { pathname, search, searchParams } = request.nextUrl;
+
+  // Quando o Supabase não reconhece o endereço de retorno, ele manda o link do
+  // e-mail para a raiz do Site URL (ex.: "/?code=..."). Encaminhamos para o
+  // callback, que troca o código pela sessão.
+  if (pathname !== "/auth/callback" && searchParams.has("code")) {
+    return redirectPreservandoCookies(request, response, "/auth/callback", {
+      code: searchParams.get("code")!,
+      next: "/app",
+    });
+  }
+  if (pathname === "/" && searchParams.has("error_code")) {
+    return redirectPreservandoCookies(request, response, "/entrar", { erro: "link" });
+  }
 
   if (!logado && (pathname === "/app" || pathname.startsWith("/app/"))) {
     return redirectPreservandoCookies(request, response, "/entrar", {
