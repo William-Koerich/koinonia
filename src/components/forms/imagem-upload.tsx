@@ -5,9 +5,9 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { IMAGEM_TAMANHO_MAX, IMAGEM_TIPOS, STORAGE_BUCKET, urlDoStorage } from "@/lib/storage";
-import { createClient } from "@/lib/supabase/client";
+import { IMAGEM_TIPOS, urlDoStorage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { enviarImagem, type PastaImagem } from "./enviar-imagem";
 
 /**
  * Envia a imagem direto do navegador para o bucket público (a policy do
@@ -20,7 +20,7 @@ export function ImagemUpload({
   onChange,
   proporcao = "aspect-square",
 }: {
-  pasta: "pastores" | "projetos";
+  pasta: PastaImagem;
   value: string | null;
   onChange: (path: string | null) => void;
   proporcao?: "aspect-square" | "aspect-video";
@@ -30,29 +30,11 @@ export function ImagemUpload({
   const url = urlDoStorage(value);
 
   async function enviar(arquivo: File) {
-    if (!IMAGEM_TIPOS.includes(arquivo.type)) {
-      toast.error("Use uma imagem JPG, PNG ou WebP.");
-      return;
-    }
-    if (arquivo.size > IMAGEM_TAMANHO_MAX) {
-      toast.error("A imagem deve ter no máximo 5 MB.");
-      return;
-    }
-
     setEnviando(true);
-    const extensao = arquivo.type.split("/")[1].replace("jpeg", "jpg");
-    const path = `${pasta}/${crypto.randomUUID()}.${extensao}`;
-    const { error } = await createClient().storage.from(STORAGE_BUCKET).upload(path, arquivo, {
-      contentType: arquivo.type,
-      cacheControl: "31536000", // nome único por upload, então pode cachear para sempre
-    });
+    const resultado = await enviarImagem(pasta, arquivo);
     setEnviando(false);
-
-    if (error) {
-      toast.error("Não foi possível enviar a imagem. Tente novamente.");
-      return;
-    }
-    onChange(path);
+    if ("erro" in resultado) toast.error(resultado.erro);
+    else onChange(resultado.path);
   }
 
   return (

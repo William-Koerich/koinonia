@@ -21,7 +21,11 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Apaga do bucket a imagem que deixou de ser usada (falha aqui não impede o salvamento) */
 async function removerImagem(supabase: Supabase, path: string | null | undefined) {
-  if (path) await supabase.storage.from(STORAGE_BUCKET).remove([path]);
+  if (path) await removerImagens(supabase, [path]);
+}
+
+async function removerImagens(supabase: Supabase, paths: string[]) {
+  if (paths.length) await supabase.storage.from(STORAGE_BUCKET).remove(paths);
 }
 
 // ---------------------------------------------------------------- pastores
@@ -72,16 +76,16 @@ export async function salvarProjeto(id: string | null, input: ProjetoInput): Pro
   const parsed = projetoSchema.safeParse(input);
   if (!parsed.success) return erroValidacao(parsed.error);
 
-  const supabase = await createClient();
-  let imagemAntiga: string | null = null;
-  if (id) {
-    const { data } = await supabase.from("koinonia_projetos").select("imagem_path").eq("id", id).maybeSingle();
-    imagemAntiga = data?.imagem_path ?? null;
-  }
+  const { imagens, capa, ...campos } = parsed.data;
+  // a capa fica em imagem_path (listagem e Open Graph); sem escolha, vale a primeira
+  const dados = { ...campos, imagem_path: capa ?? imagens[0] ?? null };
 
-  const { error } = id
-    ? await supabase.from("koinonia_projetos").update(parsed.data).eq("id", id)
-    : await supabase.from("koinonia_projetos").insert(parsed.data);
+  const supabase = await createClient();
+  const antigas = id ? await imagensDoProjeto(supabase, id) : [];
+
+  const { data: salvo, error } = id
+    ? await supabase.from("koinonia_projetos").update(dados).eq("id", id).select("id").single()
+    : await supabase.from("koinonia_projetos").insert(dados).select("id").single();
   if (error) {
     if (error.code === "23505") {
       return { ok: false, error: "Já existe um projeto com esse endereço.", fieldErrors: { slug: ["Endereço já usado por outro projeto."] } };
@@ -89,20 +93,44 @@ export async function salvarProjeto(id: string | null, input: ProjetoInput): Pro
     return { ok: false, error: mensagemErroBanco(error) };
   }
 
-  if (imagemAntiga !== parsed.data.imagem_path) await removerImagem(supabase, imagemAntiga);
+  // galeria: regrava na ordem atual
+  const { error: erroLimpar } = await supabase.from("koinonia_projeto_imagens").delete().eq("projeto_id", salvo.id);
+  if (erroLimpar) return { ok: false, error: mensagemErroBanco(erroLimpar) };
+  if (imagens.length) {
+    const { error: erroGaleria } = await supabase
+      .from("koinonia_projeto_imagens")
+      .insert(imagens.map((path, ordem) => ({ projeto_id: salvo.id, path, ordem })));
+    if (erroGaleria) return { ok: false, error: mensagemErroBanco(erroGaleria) };
+  }
+
+  // apaga do bucket as imagens que saíram da galeria
+  await removerImagens(supabase, antigas.filter((path) => !imagens.includes(path)));
 
   updateTag(TAGS.projetos);
   revalidatePath("/app/conteudo/projetos");
   redirect("/app/conteudo/projetos");
 }
 
+/** Caminhos da galeria + capa atual (inclui capas antigas fora da galeria) */
+async function imagensDoProjeto(supabase: Supabase, id: string): Promise<string[]> {
+  const [{ data: projeto }, { data: galeria }] = await Promise.all([
+    supabase.from("koinonia_projetos").select("imagem_path").eq("id", id).maybeSingle(),
+    supabase.from("koinonia_projeto_imagens").select("path").eq("projeto_id", id),
+  ]);
+  const caminhos = new Set(galeria?.map((g) => g.path));
+  if (projeto?.imagem_path) caminhos.add(projeto.imagem_path);
+  return [...caminhos];
+}
+
 export async function excluirProjeto(id: string): Promise<ActionResult> {
   if (!(await autorizar("ADMIN", "PASTOR"))) return { ok: false, error: SEM_PERMISSAO };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("koinonia_projetos").delete().eq("id", id).select("imagem_path").maybeSingle();
+  const imagens = await imagensDoProjeto(supabase, id);
+  // a galeria sai junto (on delete cascade)
+  const { error } = await supabase.from("koinonia_projetos").delete().eq("id", id);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
-  await removerImagem(supabase, data?.imagem_path);
+  await removerImagens(supabase, imagens);
 
   updateTag(TAGS.projetos);
   revalidatePath("/app/conteudo/projetos");

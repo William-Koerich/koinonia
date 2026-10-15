@@ -13,8 +13,16 @@ export default async function EditarProjetoPage({ params }: PageProps<"/app/cont
   const { id } = await params;
 
   const supabase = await createClient();
-  const { data: projeto } = await supabase.from("koinonia_projetos").select("*").eq("id", id).maybeSingle();
+  const { data: projeto } = await supabase
+    .from("koinonia_projetos")
+    .select("*, galeria:koinonia_projeto_imagens(path, ordem)")
+    .eq("id", id)
+    .maybeSingle();
   if (!projeto) notFound();
+
+  const imagens = [...projeto.galeria].sort((a, b) => a.ordem - b.ordem).map((g) => g.path);
+  // capa antiga fora da galeria (dado legado) cai na primeira imagem
+  const capa = projeto.imagem_path && imagens.includes(projeto.imagem_path) ? projeto.imagem_path : (imagens[0] ?? null);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -28,7 +36,8 @@ export default async function EditarProjetoPage({ params }: PageProps<"/app/cont
               slug: projeto.slug,
               resumo: projeto.resumo ?? "",
               descricao: projeto.descricao,
-              imagem_path: projeto.imagem_path,
+              imagens,
+              capa,
               status: projeto.status,
               publicado: projeto.publicado,
               ordem: String(projeto.ordem),

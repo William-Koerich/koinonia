@@ -81,11 +81,14 @@ export async function getProjeto(slug: string) {
 
   const { data, error } = await createPublicClient()
     .from("koinonia_projetos")
-    .select("id, slug, titulo, resumo, descricao, imagem_path, status, updated_at")
+    .select("id, slug, titulo, resumo, descricao, imagem_path, status, updated_at, galeria:koinonia_projeto_imagens(path, ordem)")
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error(`Erro ao carregar projeto: ${error.message}`);
-  return data;
+  if (!data) return null;
+
+  const { galeria, ...projeto } = data;
+  return { ...projeto, imagens: [...galeria].sort((a, b) => a.ordem - b.ordem).map((g) => g.path) };
 }
 
 export async function getContribuicao() {

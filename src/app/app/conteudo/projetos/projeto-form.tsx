@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Controller } from "react-hook-form";
-import { ImagemUpload } from "@/components/forms/imagem-upload";
+import { Controller, useWatch } from "react-hook-form";
+import { GaleriaUpload } from "@/components/forms/galeria-upload";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { slugify } from "@/lib/format";
-import { projetoSchema, STATUS_PROJETO, type ProjetoInput } from "@/lib/validation/conteudo";
+import { MAX_IMAGENS_PROJETO, projetoSchema, STATUS_PROJETO, type ProjetoInput } from "@/lib/validation/conteudo";
 import { salvarProjeto } from "../actions";
 
 export function ProjetoForm({ id, valores }: { id?: string; valores: ProjetoInput }) {
@@ -29,6 +29,7 @@ export function ProjetoForm({ id, valores }: { id?: string; valores: ProjetoInpu
     action: (v) => salvarProjeto(id ?? null, v),
   });
   const { errors, dirtyFields } = form.formState;
+  const capa = useWatch({ control: form.control, name: "capa" });
 
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -60,16 +61,29 @@ export function ProjetoForm({ id, valores }: { id?: string; valores: ProjetoInpu
           <FieldError errors={[errors.slug]} />
         </Field>
 
-        <Field>
-          <FieldLabel>Imagem</FieldLabel>
+        <Field data-invalid={!!errors.imagens || !!errors.capa}>
+          <FieldLabel>Imagens</FieldLabel>
           <Controller
             control={form.control}
-            name="imagem_path"
+            name="imagens"
             render={({ field }) => (
-              <ImagemUpload pasta="projetos" proporcao="aspect-video" value={field.value} onChange={field.onChange} />
+              <GaleriaUpload
+                pasta="projetos"
+                maximo={MAX_IMAGENS_PROJETO}
+                imagens={field.value}
+                capa={capa}
+                onChange={(imagens, novaCapa) => {
+                  field.onChange(imagens);
+                  form.setValue("capa", novaCapa, { shouldDirty: true });
+                }}
+              />
             )}
           />
-          <FieldDescription>Horizontal (16:9), de preferência. JPG, PNG ou WebP até 5 MB.</FieldDescription>
+          <FieldDescription>
+            Envie várias de uma vez e escolha a capa (aparece na listagem e ao compartilhar). Horizontais (16:9) ficam
+            melhores. JPG, PNG ou WebP até 5 MB cada, no máximo {MAX_IMAGENS_PROJETO}.
+          </FieldDescription>
+          <FieldError errors={[errors.imagens, errors.capa]} />
         </Field>
 
         <Field data-invalid={!!errors.resumo}>

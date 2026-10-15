@@ -29,21 +29,33 @@ export const STATUS_PROJETO = [
   { value: "concluido", label: "Concluído" },
 ] as const;
 
-export const projetoSchema = z.object({
-  titulo: textoObrigatorio("o título"),
-  slug: z
-    .string()
-    .trim()
-    .min(1, "Informe o endereço da página.")
-    .max(80, "Use no máximo 80 caracteres.")
-    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use só letras minúsculas, números e hífens (ex.: reforma-do-templo)."),
-  resumo: textoOpcional(300),
-  descricao: textoObrigatorio("a descrição", 10000),
-  imagem_path: caminhoImagem,
-  status: z.enum(["planejado", "em_andamento", "concluido"], { error: "Selecione o status." }),
-  publicado: z.boolean(),
-  ordem: ordemSchema,
-});
+export const MAX_IMAGENS_PROJETO = 20;
+
+export const projetoSchema = z
+  .object({
+    titulo: textoObrigatorio("o título"),
+    slug: z
+      .string()
+      .trim()
+      .min(1, "Informe o endereço da página.")
+      .max(80, "Use no máximo 80 caracteres.")
+      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use só letras minúsculas, números e hífens (ex.: reforma-do-templo)."),
+    resumo: textoOpcional(300),
+    descricao: textoObrigatorio("a descrição", 10000),
+    /** caminhos no bucket, na ordem da galeria */
+    imagens: z
+      .array(z.string().regex(/^projetos\/[0-9a-f-]{36}\.(jpg|png|webp)$/, "Imagem inválida."))
+      .max(MAX_IMAGENS_PROJETO, `Use no máximo ${MAX_IMAGENS_PROJETO} imagens.`),
+    /** caminho da imagem de capa (uma das imagens) */
+    capa: z.string().nullable(),
+    status: z.enum(["planejado", "em_andamento", "concluido"], { error: "Selecione o status." }),
+    publicado: z.boolean(),
+    ordem: ordemSchema,
+  })
+  .refine((p) => p.capa === null || p.imagens.includes(p.capa), {
+    message: "A capa precisa ser uma das imagens do projeto.",
+    path: ["capa"],
+  });
 
 export type ProjetoInput = z.input<typeof projetoSchema>;
 

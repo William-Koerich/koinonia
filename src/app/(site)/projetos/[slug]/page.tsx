@@ -6,7 +6,8 @@ import { Suspense } from "react";
 import { Reveal } from "@/components/site/fx/reveal";
 import { STATUS_PROJETO_LABEL } from "@/components/site/projeto-status";
 import { PageHero } from "@/components/site/section";
-import { Tela } from "@/components/site/tela";
+import { Galeria } from "@/components/site/galeria";
+import { Rotulo, Tela } from "@/components/site/tela";
 import { getProjeto, getProjetos, urlDoStorage } from "@/lib/data/site";
 import { imagens } from "@/lib/imagens";
 
@@ -66,6 +67,16 @@ async function ProjetoConteudo({ params }: Pick<PageProps<"/projetos/[slug]">, "
           </Link>
         </Reveal>
       </Tela>
+
+      {projeto.imagens.length > 0 && (
+        <Tela fundo="branco">
+          <Reveal className="mb-10">
+            <Rotulo>Fotos</Rotulo>
+            <h2 className="font-display text-5xl leading-[1.05]">Veja o projeto de perto.</h2>
+          </Reveal>
+          <Galeria imagens={projeto.imagens} titulo={projeto.titulo} />
+        </Tela>
+      )}
     </>
   );
 }

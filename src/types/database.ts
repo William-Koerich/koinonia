@@ -491,6 +491,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_projeto_imagens": {
+                  Row: {
+                    "created_at": string,"id": string,"ordem": number,"path": string,"projeto_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"ordem"?: number,"path": string,"projeto_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"ordem"?: number,"path"?: string,"projeto_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_projeto_imagens_projeto_id_fkey"
+      columns: ["projeto_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_projetos"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_projetos": {
                   Row: {
                     "created_at": string,"descricao": string,"id": string,"imagem_path": string | null,"ordem": number,"publicado": boolean,"resumo": string | null,"slug": string,"status": Database["public"]['Enums']["koinonia_projeto_status"],"titulo": string,"updated_at": string
