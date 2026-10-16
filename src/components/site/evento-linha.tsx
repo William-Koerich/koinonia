@@ -1,3 +1,5 @@
+import { ArrowRightIcon } from "lucide-react";
+import Link from "next/link";
 import { PUBLICO_LABEL } from "@/components/site/evento-card";
 import type { EventoPublico } from "@/lib/data/site";
 import { formatarHora, formatarValorEvento, LOCALE, TIME_ZONE } from "@/lib/format";
@@ -29,10 +31,20 @@ export function ListaEventos({ eventos, detalhada = false }: { eventos: EventoPu
                 </p>
                 {detalhada && e.descricao && <p className="mt-3 max-w-2xl text-muted-foreground">{e.descricao}</p>}
               </div>
-              <p className="col-start-2 text-sm sm:col-start-auto sm:text-right">
-                <span className={e.valor === null ? "text-destaque" : undefined}>{formatarValorEvento(e.valor)}</span>
-                <span className="text-muted-foreground"> · {PUBLICO_LABEL[e.publico]}</span>
-              </p>
+              <div className="col-start-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm sm:col-start-auto sm:flex-col sm:items-end">
+                <p>
+                  <span className={e.valor === null ? "text-destaque" : undefined}>{formatarValorEvento(e.valor)}</span>
+                  <span className="text-muted-foreground"> · {PUBLICO_LABEL[e.publico]}</span>
+                </p>
+                {/* sem login, o proxy leva ao /entrar e depois volta para a inscrição */}
+                <Link
+                  href={`/app/eventos/${e.id}`}
+                  className="group inline-flex items-center gap-1.5 border-b border-current pb-0.5 font-medium"
+                >
+                  Inscrever-se
+                  <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
             </article>
           </StaggerItem>
         );

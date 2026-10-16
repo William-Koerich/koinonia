@@ -166,6 +166,9 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…0700_leitura_so_membros_ativos` | dados da área logada só para quem tem perfil Koinonia ativo |
 | `…0800_cadastro_publico_como_membro` | volta o cadastro público, sempre como MEMBRO (substitui a 0500) |
 | `…0900_ministerio_solicitacoes` | pedidos para participar de ministérios (membro pede, líder/PASTOR/ADMIN aprova) |
+| `…1000_projeto_imagens` | galeria de imagens dos projetos (capa em `imagem_path`) |
+| `…1100_evento_inscricoes` | inscrições em eventos: pendente → membro avisa pagamento → responsável confirma |
+| `…1200_responsavel_ve_inscritos` | responsável pelo evento vê o contato dos inscritos |
 
 ### Seed
 
@@ -223,6 +226,8 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Criar usuários | ✅ | ✅ (só Membro) | ❌ | ❌ |
 | Ver/editar usuários, ativar/desativar | ✅ | ✅ (não desativa ADMIN) | ver membros dos seus ministérios | só o próprio perfil |
 | CRUD eventos | ✅ | ✅ | ver | ver |
+| Inscrever-se em eventos | ✅ | ✅ | ✅ | ✅ (respeita o público do evento) |
+| Confirmar/recusar inscrições | ✅ | ✅ | se for o responsável pelo evento | se for o responsável pelo evento |
 | CRUD ministérios | ✅ | ✅ | ver | ver |
 | Vincular membros a ministério / aprovar pedidos | ✅ | ✅ | só nos que lidera, só membros comuns | ❌ (pode **pedir para participar**) |
 | Marcar líder de ministério | ✅ | ✅ | ❌ | ❌ |
@@ -237,6 +242,7 @@ Regras automáticas:
 - **Usuário inativo** não entra em `/app`, não pode ser escalado e não lê dados da área logada.
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois.
+- **Inscrições em eventos**: evento gratuito confirma na hora; evento pago fica pendente, o membro vê o PIX com o valor do evento, avisa "já paguei" e o responsável pelo evento (ou PASTOR/ADMIN) confirma. Inscrição confirmada só é cancelada pelo responsável. Integração com gateway de pagamento: futura.
 - Contas do mesmo `auth.users` que não têm perfil Koinonia (outros apps) são levadas a completar o cadastro (entram como MEMBRO) e, até lá, não leem nenhum dado da área logada.
 - **Toda conta criada pelo próprio usuário entra como MEMBRO**, ativa e sem GC — mesmo que alguém chame a API do Supabase direto pedindo outro papel.
 

@@ -54,11 +54,14 @@ export function gerarPayloadPix({
   tipo,
   recebedor,
   cidade,
+  valor,
 }: {
   chave: string;
   tipo: Enums<"koinonia_tipo_chave_pix">;
   recebedor: string;
   cidade: string;
+  /** Valor fixo em reais (ex.: inscrição de evento); sem valor, a pessoa digita no app */
+  valor?: number | null;
 }): string {
   const contaRecebedor = campo("00", "br.gov.bcb.pix") + campo("01", normalizarChavePix(chave, tipo));
 
@@ -67,6 +70,7 @@ export function gerarPayloadPix({
     campo("26", contaRecebedor) +
     campo("52", "0000") + // categoria do comerciante (não informada)
     campo("53", "986") + // moeda: BRL
+    (valor ? campo("54", valor.toFixed(2)) : "") + // valor com ponto decimal: "35.00"
     campo("58", "BR") +
     campo("59", normalizar(recebedor, 25)) +
     campo("60", normalizar(cidade, 15)) +

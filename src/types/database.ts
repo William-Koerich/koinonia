@@ -315,6 +315,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_evento_inscricoes": {
+                  Row: {
+                    "created_at": string,"decidido_em": string | null,"decidido_por": string | null,"evento_id": string,"id": string,"observacao": string | null,"pagamento_informado_em": string | null,"profile_id": string,"status": Database["public"]['Enums']["koinonia_inscricao_status"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id": string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id": string,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
+                  }
+                  Update: {
+                    "created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id"?: string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id"?: string,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_evento_inscricoes_decidido_por_fkey"
+      columns: ["decidido_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_evento_inscricoes_decidido_por_fkey"
+      columns: ["decidido_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_evento_inscricoes_evento_id_fkey"
+      columns: ["evento_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_eventos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_evento_inscricoes_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_evento_inscricoes_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_eventos": {
                   Row: {
                     "bairro": string,"cep": string,"cidade": string,"complemento": string | null,"created_at": string,"created_by": string | null,"descricao": string | null,"fim": string,"id": string,"inicio": string,"logradouro": string,"numero": string,"publico": Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id": string,"titulo": string,"uf": string,"updated_at": string,"valor": number | null
@@ -785,6 +829,9 @@ isOneToOne: false
 "koinonia_current_user_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["koinonia_user_role"]
                            },
+"koinonia_informar_pagamento":
+{ Args: { "p_evento_id": string }; Returns: undefined
+                           },
 "koinonia_is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -799,6 +846,12 @@ isOneToOne: false
                            },
 "koinonia_is_membro_ativo":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"koinonia_is_responsavel_evento":
+{ Args: { "p_evento_id": string }; Returns: boolean
+                           },
+"koinonia_is_responsavel_por_inscrito":
+{ Args: { "p_profile_id": string }; Returns: boolean
                            },
 "koinonia_participa_de":
 { Args: { "p_ministerio_id": string }; Returns: boolean
@@ -852,7 +905,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_genero": "masculino"|"feminino","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
+            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -968,7 +1021,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_genero": ["masculino", "feminino"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
+            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
           }
         }
 } as const

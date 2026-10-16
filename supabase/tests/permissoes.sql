@@ -183,6 +183,68 @@ select koinonia_teste_bloqueia($$insert into koinonia_ministerio_solicitacoes (m
 reset role;
 
 \echo
+\echo '== Inscrições em eventos'
+reset role;
+select set_config('request.jwt.claims', '', true); -- eventos de teste criados como sistema
+insert into public.koinonia_eventos (id, titulo, cep, logradouro, numero, bairro, cidade, uf, inicio, fim, valor, responsavel_id, publico) values
+  ('99999999-0000-4000-a000-0000000000e2', 'Pago Teste', '89030410', 'R', '1', 'B', 'C', 'SC', now() + interval '2 days', now() + interval '2 days 2 hours', 50, :'admin_id', 'todos'),
+  ('99999999-0000-4000-a000-0000000000e3', 'Só Homens Teste', '89030410', 'R', '1', 'B', 'C', 'SC', now() + interval '2 days', now() + interval '2 days 2 hours', null, :'admin_id', 'homens'),
+  ('99999999-0000-4000-a000-0000000000e4', 'Encerrado Teste', '89030410', 'R', '1', 'B', 'C', 'SC', now() - interval '3 days', now() - interval '2 days', null, :'admin_id', 'todos'),
+  ('99999999-0000-4000-a000-0000000000e5', 'Responsável Membro Teste', '89030410', 'R', '1', 'B', 'C', 'SC', now() + interval '3 days', now() + interval '3 days 2 hours', 30, :'membro_id', 'todos');
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+insert into koinonia_evento_inscricoes (evento_id, profile_id, status) values ('99999999-0000-4000-a000-000000000001', auth.uid(), 'pendente');
+select koinonia_teste_ok((select status = 'confirmada' from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-000000000001' and profile_id = auth.uid()),
+  'evento gratuito confirma a inscrição na hora');
+insert into koinonia_evento_inscricoes (evento_id, profile_id, status) values ('99999999-0000-4000-a000-0000000000e2', auth.uid(), 'confirmada');
+select koinonia_teste_ok((select status = 'pendente' from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = auth.uid()),
+  'evento pago fica pendente (mesmo pedindo confirmada)');
+with u as (update koinonia_evento_inscricoes set status = 'confirmada' where profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 0, 'membro não confirma a própria inscrição') from u;
+select koinonia_informar_pagamento('99999999-0000-4000-a000-0000000000e2');
+select koinonia_teste_ok((select pagamento_informado_em is not null from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = auth.uid()),
+  'membro avisa “já paguei”');
+select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000e2', auth.uid())$$,
+  'não se inscreve duas vezes');
+select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000e3', auth.uid())$$,
+  'respeita o público do evento');
+select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000e4', auth.uid())$$,
+  'não se inscreve em evento encerrado');
+select koinonia_teste_bloqueia(format($$insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000e2', %L)$$, current_setting('teste.pastor')),
+  'não inscreve outra pessoa');
+with d as (delete from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-000000000001' and profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 0, 'não cancela sozinho uma inscrição já confirmada') from d;
+reset role;
+
+-- o admin se inscreve no evento em que o MEMBRO é o responsável
+select koinonia_teste_como('admin');
+set local role authenticated;
+insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000e5', auth.uid());
+reset role;
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_evento_inscricoes where profile_id <> auth.uid()) = 1,
+  'responsável vê só as inscrições do seu evento');
+select koinonia_teste_ok((select count(*) from koinonia_profiles where id = current_setting('teste.admin')::uuid) = 1,
+  'responsável vê o contato de quem se inscreveu');
+with u as (update koinonia_evento_inscricoes set status = 'confirmada'
+           where evento_id = '99999999-0000-4000-a000-0000000000e5' returning decidido_por)
+select koinonia_teste_ok(count(*) = 1 and bool_and(decidido_por = auth.uid()), 'responsável confirma a inscrição (e fica registrado quem decidiu)') from u;
+with u as (update koinonia_evento_inscricoes set status = 'confirmada'
+           where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 0, 'não aprova inscrição de evento que não é responsável') from u;
+with d as (delete from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 1, 'cancela a própria inscrição pendente') from d;
+reset role;
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_evento_inscricoes) >= 2, 'pastor vê as inscrições de todos os eventos');
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';

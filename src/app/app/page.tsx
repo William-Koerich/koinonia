@@ -1,4 +1,4 @@
-import { CakeIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TriangleAlertIcon } from "lucide-react";
+import { CakeIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
@@ -35,6 +35,8 @@ export default async function DashboardPage() {
       )}
 
       <PedidosParaDecidir meuId={profile.id} />
+      <InscricoesAConferir meuId={profile.id} />
+      <MinhasInscricoes meuId={profile.id} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <MinhasEscalas profile={profile} />
@@ -79,6 +81,108 @@ async function PedidosParaDecidir({ meuId }: { meuId: string }) {
               </Button>
             </li>
           ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Inscrições pendentes nos eventos que o usuário gerencia (responsável, PASTOR, ADMIN) */
+async function InscricoesAConferir({ meuId }: { meuId: string }) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("koinonia_evento_inscricoes")
+    .select("evento_id, pagamento_informado_em, evento:koinonia_eventos!inner(titulo, fim)")
+    .eq("status", "pendente")
+    .neq("profile_id", meuId)
+    .gte("evento.fim", new Date().toISOString());
+  if (!data?.length) return null;
+
+  // agrupa por evento
+  const porEvento = new Map<string, { titulo: string; pendentes: number; pagos: number }>();
+  for (const i of data) {
+    const atual = porEvento.get(i.evento_id) ?? { titulo: i.evento.titulo, pendentes: 0, pagos: 0 };
+    atual.pendentes++;
+    if (i.pagamento_informado_em) atual.pagos++;
+    porEvento.set(i.evento_id, atual);
+  }
+
+  return (
+    <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TicketIcon className="size-5 text-amber-600" /> Inscrições aguardando confirmação
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {[...porEvento].map(([eventoId, e]) => (
+            <li key={eventoId} className="flex items-center justify-between gap-3 py-2">
+              <p className="min-w-0">
+                <span className="font-medium">{e.titulo}</span>
+                <span className="text-sm text-muted-foreground">
+                  {" "}
+                  · {e.pendentes} {e.pendentes === 1 ? "pendente" : "pendentes"}
+                  {e.pagos > 0 && `, ${e.pagos} ${e.pagos === 1 ? "avisou" : "avisaram"} que pagou`}
+                </span>
+              </p>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/app/eventos/${eventoId}`}>Conferir</Link>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Próximos eventos em que o usuário está inscrito */
+async function MinhasInscricoes({ meuId }: { meuId: string }) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("koinonia_evento_inscricoes")
+    .select("evento_id, status, pagamento_informado_em, evento:koinonia_eventos!inner(titulo, inicio, fim)")
+    .eq("profile_id", meuId)
+    .gte("evento.fim", new Date().toISOString());
+  if (!data?.length) return null;
+
+  const ordenadas = [...data].sort((a, b) => a.evento.inicio.localeCompare(b.evento.inicio));
+  const situacao = (i: (typeof data)[number]) =>
+    i.status === "confirmada"
+      ? { texto: "Confirmada", classe: "text-emerald-700" }
+      : i.status === "recusada"
+        ? { texto: "Recusada", classe: "text-destructive" }
+        : i.pagamento_informado_em
+          ? { texto: "Pagamento em conferência", classe: "text-amber-700" }
+          : { texto: "Aguardando seu pagamento", classe: "text-amber-700" };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TicketIcon className="size-5 text-primary" /> Minhas inscrições
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {ordenadas.map((i) => {
+            const s = situacao(i);
+            return (
+              <li key={i.evento_id}>
+                <Link href={`/app/eventos/${i.evento_id}`} className="flex items-center justify-between gap-3 py-2 hover:underline">
+                  <span className="min-w-0">
+                    <span className="font-medium">{i.evento.titulo}</span>
+                    <span className="text-sm text-muted-foreground first-letter:uppercase">
+                      {" "}
+                      · {formatarDataLonga(i.evento.inicio)}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 text-sm font-medium ${s.classe}`}>{s.texto}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </CardContent>
     </Card>
