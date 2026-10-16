@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getProfile } from "@/lib/auth";
 import { SEM_PERMISSAO } from "@/lib/actions";
-import { mensagemErroBanco } from "@/lib/errors";
+import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
+import { novoInscritoSchema, type NovoInscritoInput } from "@/lib/validation/inscricao";
 
 const observacaoSchema = z
   .string()
@@ -102,6 +103,39 @@ export async function decidirInscricao(
     ok: true,
     message: { confirmada: "Inscrição confirmada.", recusada: "Inscrição recusada.", pendente: "Inscrição voltou para pendente." }[status],
   };
+}
+
+/**
+ * Responsável pelo evento / PASTOR / ADMIN inscreve outra pessoa: membro com
+ * conta ou convidado sem conta. A RLS garante quem pode; o trigger valida
+ * público do evento e encerramento.
+ */
+export async function adicionarInscrito(eventoId: string, input: NovoInscritoInput): Promise<ActionResult> {
+  const profile = await getProfile();
+  if (!profile?.ativo) return { ok: false, error: SEM_PERMISSAO };
+
+  const parsed = novoInscritoSchema.safeParse(input);
+  if (!parsed.success) return erroValidacao(parsed.error);
+  const d = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("koinonia_evento_inscricoes").insert({
+    evento_id: eventoId,
+    status: d.pago ? "confirmada" : "pendente",
+    observacao: d.observacao,
+    ...(d.tipo === "membro"
+      ? { profile_id: d.profile_id }
+      : { profile_id: null, convidado_nome: d.convidado_nome, convidado_celular: d.convidado_celular || null }),
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "Esta pessoa já está inscrita no evento." };
+    if (error.code === "42501") return { ok: false, error: "Só o responsável pelo evento, pastores e administradores adicionam pessoas." };
+    return { ok: false, error: mensagemErroBanco(error) };
+  }
+
+  revalidar(eventoId);
+  const nome = d.tipo === "convidado" ? d.convidado_nome : "Pessoa";
+  return { ok: true, message: `${nome} adicionado(a) à lista de inscritos.` };
 }
 
 export async function removerInscricao(eventoId: string, inscricaoId: string): Promise<ActionResult> {

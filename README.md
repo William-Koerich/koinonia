@@ -169,6 +169,7 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1000_projeto_imagens` | galeria de imagens dos projetos (capa em `imagem_path`) |
 | `…1100_evento_inscricoes` | inscrições em eventos: pendente → membro avisa pagamento → responsável confirma |
 | `…1200_responsavel_ve_inscritos` | responsável pelo evento vê o contato dos inscritos |
+| `…1300_evento_pix_e_convidados` | chave PIX por evento (escondida do público) e inscrição de convidados sem conta |
 
 ### Seed
 
@@ -242,7 +243,8 @@ Regras automáticas:
 - **Usuário inativo** não entra em `/app`, não pode ser escalado e não lê dados da área logada.
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois.
-- **Inscrições em eventos**: evento gratuito confirma na hora; evento pago fica pendente, o membro vê o PIX com o valor do evento, avisa "já paguei" e o responsável pelo evento (ou PASTOR/ADMIN) confirma. Inscrição confirmada só é cancelada pelo responsável. Integração com gateway de pagamento: futura.
+- **Inscrições em eventos**: evento gratuito confirma na hora; evento pago fica pendente, o membro vê o PIX com o valor do evento, avisa "já paguei" e o responsável pelo evento (ou PASTOR/ADMIN) confirma. Inscrição confirmada só é cancelada pelo responsável. Cada evento pode ter a própria chave PIX; sem ela, vale a da igreja. O responsável também inscreve outras pessoas — membros com conta ou convidados sem conta (nome e celular). Integração com gateway de pagamento: futura.
+- **Colunas visíveis ao público**: o papel `anon` só lê as colunas de `koinonia_eventos` liberadas na migration 1300 (a chave PIX fica de fora). Uma coluna nova que deva aparecer no site precisa de `grant select (coluna) ... to anon`.
 - Contas do mesmo `auth.users` que não têm perfil Koinonia (outros apps) são levadas a completar o cadastro (entram como MEMBRO) e, até lá, não leem nenhum dado da área logada.
 - **Toda conta criada pelo próprio usuário entra como MEMBRO**, ativa e sem GC — mesmo que alguém chame a API do Supabase direto pedindo outro papel.
 

@@ -27,11 +27,18 @@ export const eventoSchema = enderecoSchema
       .refine((v) => v === null || v > 0, "O valor deve ser maior que zero (deixe vazio se for gratuito)."),
     responsavel_id: z.uuid("Selecione o responsável."),
     publico: z.enum(["todos", "homens", "mulheres"], { error: "Selecione o público." }),
+    // PIX próprio do evento (opcional; sem ele, vale o PIX da igreja)
+    pix_chave: textoOpcional(100),
+    pix_tipo: z
+      .enum(["", "cnpj", "cpf", "email", "telefone", "aleatoria"])
+      .transform((v) => (v === "" ? null : v)),
+    pix_recebedor: textoOpcional(25),
   })
   .refine((e) => new Date(e.fim) > new Date(e.inicio), {
     message: "O término deve ser depois do início.",
     path: ["fim"],
-  });
+  })
+  .refine((e) => !e.pix_chave || e.pix_tipo, { message: "Selecione o tipo da chave.", path: ["pix_tipo"] });
 
 export type EventoInput = z.input<typeof eventoSchema>;
 
@@ -44,4 +51,7 @@ export const EVENTO_VAZIO: EventoInput = {
   valor: "",
   responsavel_id: "",
   publico: "todos",
+  pix_chave: "",
+  pix_tipo: "",
+  pix_recebedor: "",
 };

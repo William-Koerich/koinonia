@@ -94,7 +94,8 @@ async function InscricoesAConferir({ meuId }: { meuId: string }) {
     .from("koinonia_evento_inscricoes")
     .select("evento_id, pagamento_informado_em, evento:koinonia_eventos!inner(titulo, fim)")
     .eq("status", "pendente")
-    .neq("profile_id", meuId)
+    // convidados não têm profile_id: "neq" sozinho os deixaria de fora
+    .or(`profile_id.is.null,profile_id.neq.${meuId}`)
     .gte("evento.fim", new Date().toISOString());
   if (!data?.length) return null;
 

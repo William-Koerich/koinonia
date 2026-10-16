@@ -317,17 +317,29 @@ isOneToOne: false
                   ]
                 },"koinonia_evento_inscricoes": {
                   Row: {
-                    "created_at": string,"decidido_em": string | null,"decidido_por": string | null,"evento_id": string,"id": string,"observacao": string | null,"pagamento_informado_em": string | null,"profile_id": string,"status": Database["public"]['Enums']["koinonia_inscricao_status"]
+                    "adicionado_por": string | null,"convidado_celular": string | null,"convidado_nome": string | null,"created_at": string,"decidido_em": string | null,"decidido_por": string | null,"evento_id": string,"id": string,"observacao": string | null,"pagamento_informado_em": string | null,"profile_id": string | null,"status": Database["public"]['Enums']["koinonia_inscricao_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id": string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id": string,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
+                    "adicionado_por"?: string | null,"convidado_celular"?: string | null,"convidado_nome"?: string | null,"created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id": string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
                   }
                   Update: {
-                    "created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id"?: string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id"?: string,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
+                    "adicionado_por"?: string | null,"convidado_celular"?: string | null,"convidado_nome"?: string | null,"created_at"?: string,"decidido_em"?: string | null,"decidido_por"?: string | null,"evento_id"?: string,"id"?: string,"observacao"?: string | null,"pagamento_informado_em"?: string | null,"profile_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_inscricao_status"]
                   }
                   Relationships: [
                     {
+      foreignKeyName: "koinonia_evento_inscricoes_adicionado_por_fkey"
+      columns: ["adicionado_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_evento_inscricoes_adicionado_por_fkey"
+      columns: ["adicionado_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "koinonia_evento_inscricoes_decidido_por_fkey"
       columns: ["decidido_por"]
 isOneToOne: false
@@ -361,14 +373,14 @@ isOneToOne: false
                   ]
                 },"koinonia_eventos": {
                   Row: {
-                    "bairro": string,"cep": string,"cidade": string,"complemento": string | null,"created_at": string,"created_by": string | null,"descricao": string | null,"fim": string,"id": string,"inicio": string,"logradouro": string,"numero": string,"publico": Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id": string,"titulo": string,"uf": string,"updated_at": string,"valor": number | null
+                    "bairro": string,"cep": string,"cidade": string,"complemento": string | null,"created_at": string,"created_by": string | null,"descricao": string | null,"fim": string,"id": string,"inicio": string,"logradouro": string,"numero": string,"pix_chave": string | null,"pix_recebedor": string | null,"pix_tipo": Database["public"]['Enums']["koinonia_tipo_chave_pix"] | null,"publico": Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id": string,"titulo": string,"uf": string,"updated_at": string,"valor": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "bairro": string,"cep": string,"cidade": string,"complemento"?: string | null,"created_at"?: string,"created_by"?: string | null,"descricao"?: string | null,"fim": string,"id"?: string,"inicio": string,"logradouro": string,"numero": string,"publico"?: Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id": string,"titulo": string,"uf": string,"updated_at"?: string,"valor"?: number | null
+                    "bairro": string,"cep": string,"cidade": string,"complemento"?: string | null,"created_at"?: string,"created_by"?: string | null,"descricao"?: string | null,"fim": string,"id"?: string,"inicio": string,"logradouro": string,"numero": string,"pix_chave"?: string | null,"pix_recebedor"?: string | null,"pix_tipo"?: Database["public"]['Enums']["koinonia_tipo_chave_pix"] | null,"publico"?: Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id": string,"titulo": string,"uf": string,"updated_at"?: string,"valor"?: number | null
                   }
                   Update: {
-                    "bairro"?: string,"cep"?: string,"cidade"?: string,"complemento"?: string | null,"created_at"?: string,"created_by"?: string | null,"descricao"?: string | null,"fim"?: string,"id"?: string,"inicio"?: string,"logradouro"?: string,"numero"?: string,"publico"?: Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id"?: string,"titulo"?: string,"uf"?: string,"updated_at"?: string,"valor"?: number | null
+                    "bairro"?: string,"cep"?: string,"cidade"?: string,"complemento"?: string | null,"created_at"?: string,"created_by"?: string | null,"descricao"?: string | null,"fim"?: string,"id"?: string,"inicio"?: string,"logradouro"?: string,"numero"?: string,"pix_chave"?: string | null,"pix_recebedor"?: string | null,"pix_tipo"?: Database["public"]['Enums']["koinonia_tipo_chave_pix"] | null,"publico"?: Database["public"]['Enums']["koinonia_publico_evento"],"responsavel_id"?: string,"titulo"?: string,"uf"?: string,"updated_at"?: string,"valor"?: number | null
                   }
                   Relationships: [
                     {

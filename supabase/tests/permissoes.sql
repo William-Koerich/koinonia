@@ -245,6 +245,37 @@ select koinonia_teste_ok((select count(*) from koinonia_evento_inscricoes) >= 2,
 reset role;
 
 \echo
+\echo '== Convidados e PIX do evento'
+select koinonia_teste_como('membro');
+set local role authenticated;
+-- MEMBRO é o responsável pelo evento e5: adiciona um convidado já pago
+insert into koinonia_evento_inscricoes (evento_id, convidado_nome, convidado_celular, status)
+values ('99999999-0000-4000-a000-0000000000e5', 'Convidado Teste', '4733089872', 'confirmada');
+select koinonia_teste_ok((select status = 'confirmada' and adicionado_por = auth.uid() from koinonia_evento_inscricoes where convidado_nome = 'Convidado Teste'),
+  'responsável inscreve convidado sem conta (já confirmado)');
+select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, convidado_nome)
+  values ('99999999-0000-4000-a000-0000000000e2', 'Intruso')$$, 'não adiciona convidado em evento que não é responsável');
+select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, profile_id, convidado_nome)
+  values ('99999999-0000-4000-a000-0000000000e5', auth.uid(), 'Os dois')$$, 'inscrição é de membro OU de convidado, nunca os dois');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+insert into koinonia_evento_inscricoes (evento_id, profile_id, status) values ('99999999-0000-4000-a000-0000000000e2', current_setting('teste.membro')::uuid, 'pendente');
+select koinonia_teste_ok((select adicionado_por = auth.uid() from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = current_setting('teste.membro')::uuid),
+  'pastor inscreve um membro com conta');
+reset role;
+select set_config('request.jwt.claims', '', true);
+update public.koinonia_eventos set pix_chave = '47999990000', pix_tipo = 'telefone' where id = '99999999-0000-4000-a000-0000000000e2';
+set local role anon;
+select koinonia_teste_bloqueia('select pix_chave from koinonia_eventos', 'visitante não vê a chave PIX do evento');
+select koinonia_teste_ok((select count(*) from koinonia_eventos where id = '99999999-0000-4000-a000-0000000000e2') = 1, 'visitante continua vendo o evento');
+reset role;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select pix_chave = '47999990000' from koinonia_eventos where id = '99999999-0000-4000-a000-0000000000e2'), 'membro logado vê a chave PIX do evento');
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';

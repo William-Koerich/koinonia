@@ -18,8 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TIPOS_CHAVE_PIX } from "@/lib/validation/conteudo";
 import { eventoSchema, PUBLICOS, type EventoInput } from "@/lib/validation/evento";
 import { salvarEvento } from "./actions";
+
+const SEM_TIPO = "igreja";
 
 export function EventoForm({
   id,
@@ -127,6 +130,53 @@ export function EventoForm({
               )}
             />
             <FieldError errors={[errors.responsavel_id]} />
+          </Field>
+
+          <FieldSeparator>Pagamento (PIX)</FieldSeparator>
+          <FieldDescription className="-mt-2">
+            Opcional. Preencha se o pagamento deste evento vai para uma chave diferente da igreja — sem isso, a
+            inscrição mostra o PIX cadastrado em Conteúdo do site → Contribuição. A chave só aparece para membros
+            logados.
+          </FieldDescription>
+          <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
+            <Field data-invalid={!!errors.pix_tipo}>
+              <FieldLabel htmlFor="pix_tipo">Tipo da chave</FieldLabel>
+              <Controller
+                control={form.control}
+                name="pix_tipo"
+                render={({ field }) => (
+                  <Select value={field.value || SEM_TIPO} onValueChange={(v) => field.onChange(v === SEM_TIPO ? "" : v)}>
+                    <SelectTrigger id="pix_tipo" className="w-full" aria-invalid={!!errors.pix_tipo}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SEM_TIPO}>Usar PIX da igreja</SelectItem>
+                      {TIPOS_CHAVE_PIX.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError errors={[errors.pix_tipo]} />
+            </Field>
+            <Field data-invalid={!!errors.pix_chave}>
+              <FieldLabel htmlFor="pix_chave">Chave PIX do evento</FieldLabel>
+              <Input id="pix_chave" aria-invalid={!!errors.pix_chave} {...form.register("pix_chave")} />
+              <FieldError errors={[errors.pix_chave]} />
+            </Field>
+          </div>
+          <Field data-invalid={!!errors.pix_recebedor}>
+            <FieldLabel htmlFor="pix_recebedor">Nome do recebedor</FieldLabel>
+            <Input
+              id="pix_recebedor"
+              maxLength={25}
+              placeholder="Como aparece no app do banco (até 25 caracteres)"
+              {...form.register("pix_recebedor")}
+            />
+            <FieldError errors={[errors.pix_recebedor]} />
           </Field>
 
           <FieldSeparator>Local</FieldSeparator>
