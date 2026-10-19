@@ -68,7 +68,9 @@ async function Mes({
   const [{ data: datas, error }, { data: meusMinisterios }] = await Promise.all([
     supabase
       .from("koinonia_cantina_escalas")
-      .select("id, data, descricao, gc_id, ministerio_id, gc:koinonia_gcs(nome), ministerio:koinonia_ministerios(nome)")
+      .select(
+        "id, data, descricao, gc_id, ministerio_id, gc:koinonia_gcs(nome), ministerio:koinonia_ministerios(nome), itens:koinonia_cantina_itens(count)",
+      )
       .gte("data", inicio)
       .lt("data", proximoInicio)
       .order("data"),
@@ -125,6 +127,17 @@ async function Mes({
                       {minha && <Badge>Você está nesta escala</Badge>}
                     </div>
                     {c.descricao && <p className="mt-1 text-sm text-muted-foreground">{c.descricao}</p>}
+                    <Link
+                      href={`/app/cantina/${c.id}`}
+                      className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                      {(c.itens[0]?.count ?? 0) > 0
+                        ? `Ver cardápio (${c.itens[0].count} ${c.itens[0].count === 1 ? "item" : "itens"}) e reservar`
+                        : minha && !passada
+                          ? "Montar o cardápio"
+                          : "Cardápio em breve"}
+                      <ChevronRightIcon className="size-4" />
+                    </Link>
                   </div>
                   {gerencia && (
                     <div className="flex">

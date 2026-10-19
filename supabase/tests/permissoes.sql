@@ -276,6 +276,62 @@ select koinonia_teste_ok((select pix_chave = '47999990000' from koinonia_eventos
 reset role;
 
 \echo
+\echo '== Cantina: cardápio e reservas'
+reset role;
+select set_config('request.jwt.claims', '', true); -- dados de teste criados como sistema
+-- B: equipe = ministério B (o MEMBRO participa); C: ministério C (MEMBRO não participa); passada
+insert into public.koinonia_cantina_escalas (id, data, ministerio_id)
+select '99999999-0000-4000-a000-0000000000c1', current_date + 900, id from public.koinonia_ministerios where nome = 'Teste Ministério B';
+insert into public.koinonia_cantina_escalas (id, data, ministerio_id)
+select '99999999-0000-4000-a000-0000000000c2', current_date + 901, id from public.koinonia_ministerios where nome = 'Teste Ministério C';
+insert into public.koinonia_cantina_escalas (id, data, ministerio_id)
+select '99999999-0000-4000-a000-0000000000c3', current_date - 900, id from public.koinonia_ministerios where nome = 'Teste Ministério C';
+insert into public.koinonia_cantina_itens (id, cantina_id, nome, preco, quantidade_disponivel) values
+  ('99999999-0000-4000-a000-0000000001c2', '99999999-0000-4000-a000-0000000000c2', 'Pastel Teste', 8, 3),
+  ('99999999-0000-4000-a000-0000000001c3', '99999999-0000-4000-a000-0000000000c3', 'Bolo Passado', 5, null);
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+with i as (insert into koinonia_cantina_itens (cantina_id, nome) values ('99999999-0000-4000-a000-0000000000c1', 'Cachorro-quente Teste') returning id)
+select koinonia_teste_ok(count(*) = 1, 'equipe escalada (ministério) monta o cardápio') from i;
+select koinonia_teste_bloqueia($$insert into koinonia_cantina_itens (cantina_id, nome) values ('99999999-0000-4000-a000-0000000000c2', 'Intruso')$$,
+  'quem não está na equipe não mexe no cardápio');
+with r as (insert into koinonia_cantina_reservas (item_id, profile_id, quantidade, modo)
+           values ('99999999-0000-4000-a000-0000000001c2', auth.uid(), 2, 'levar') returning 1)
+select koinonia_teste_ok(count(*) = 1, 'qualquer membro reserva (quantidade + levar/comer)') from r;
+select koinonia_teste_bloqueia($$insert into koinonia_cantina_reservas (item_id, profile_id, quantidade, modo)
+  values ('99999999-0000-4000-a000-0000000001c3', auth.uid(), 1, 'comer_aqui')$$, 'não reserva em cantina que já passou');
+select koinonia_teste_bloqueia(format($$insert into koinonia_cantina_reservas (item_id, profile_id, quantidade, modo)
+  values ('99999999-0000-4000-a000-0000000001c2', %L, 1, 'levar')$$, current_setting('teste.pastor')), 'não reserva em nome de outra pessoa');
+reset role;
+
+select koinonia_teste_como('admin');
+set local role authenticated;
+insert into koinonia_cantina_reservas (item_id, profile_id, quantidade, modo) values ('99999999-0000-4000-a000-0000000001c2', auth.uid(), 1, 'comer_aqui');
+insert into koinonia_cantina_reservas (item_id, profile_id, quantidade, modo)
+select i.id, auth.uid(), 1, 'levar' from koinonia_cantina_itens i where i.nome = 'Cachorro-quente Teste';
+reset role;
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$update koinonia_cantina_reservas set quantidade = 3 where item_id = '99999999-0000-4000-a000-0000000001c2' and profile_id = auth.uid()$$,
+  'respeita a quantidade disponível do item');
+select koinonia_teste_ok((select count(*) from koinonia_cantina_reservas r join koinonia_cantina_itens i on i.id = r.item_id
+                          where i.cantina_id = '99999999-0000-4000-a000-0000000000c2') = 1,
+  'fora da equipe, vê só a própria reserva');
+select koinonia_teste_ok((select reservado = 3 from koinonia_cantina_disponibilidade('99999999-0000-4000-a000-0000000000c2')
+                          where item_id = '99999999-0000-4000-a000-0000000001c2'),
+  'vê quanto já foi reservado de cada item (sem ver de quem)');
+select koinonia_teste_ok((select count(*) from koinonia_cantina_reservas r join koinonia_cantina_itens i on i.id = r.item_id
+                          where i.cantina_id = '99999999-0000-4000-a000-0000000000c1' and r.profile_id <> auth.uid()) = 1,
+  'equipe vê as reservas de todos na sua cantina');
+with u as (update koinonia_cantina_reservas set quantidade = 5 where profile_id = current_setting('teste.admin')::uuid returning 1)
+select koinonia_teste_ok(count(*) = 0, 'não altera a reserva de outra pessoa') from u;
+with u as (update koinonia_cantina_reservas set modo = 'comer_aqui', quantidade = 1 where item_id = '99999999-0000-4000-a000-0000000001c2' and profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 1, 'altera a própria reserva') from u;
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';

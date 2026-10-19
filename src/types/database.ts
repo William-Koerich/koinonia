@@ -53,6 +53,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"fertex_itens_custos": {
+                  Row: {
+                    "comissao_percentual": number | null,"custo_unitario": number | null,"item_id": string,"tipo_ganho": Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "comissao_percentual"?: number | null,"custo_unitario"?: number | null,"item_id": string,"tipo_ganho": Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  Update: {
+                    "comissao_percentual"?: number | null,"custo_unitario"?: number | null,"item_id"?: string,"tipo_ganho"?: Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fertex_itens_custos_item_id_fertex_itens_pedido_id_fk"
+      columns: ["item_id"]
+isOneToOne: true
+      referencedRelation: "fertex_itens_pedido"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"fertex_itens_pedido": {
                   Row: {
                     "cor": string | null,"id": string,"pedido_id": string,"preco_unitario": number,"produto_id": string,"quantidade": number,"unidade": Database["public"]['Enums']["fertex_unidade"],"vendedor_id": string
@@ -122,6 +142,26 @@ isOneToOne: false
       columns: ["vendedor_id"]
 isOneToOne: false
       referencedRelation: "fertex_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"fertex_produtos_custos": {
+                  Row: {
+                    "atualizado_em": string,"comissao_percentual": number | null,"preco_custo": number | null,"produto_id": string,"tipo_ganho": Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "atualizado_em"?: string,"comissao_percentual"?: number | null,"preco_custo"?: number | null,"produto_id": string,"tipo_ganho": Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  Update: {
+                    "atualizado_em"?: string,"comissao_percentual"?: number | null,"preco_custo"?: number | null,"produto_id"?: string,"tipo_ganho"?: Database["public"]['Enums']["fertex_tipo_ganho"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fertex_produtos_custos_produto_id_fertex_produtos_id_fk"
+      columns: ["produto_id"]
+isOneToOne: true
+      referencedRelation: "fertex_produtos"
       referencedColumns: ["id"]
     }
                   ]
@@ -214,6 +254,58 @@ isOneToOne: false
       columns: ["ministerio_id"]
 isOneToOne: false
       referencedRelation: "koinonia_ministerios"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"koinonia_cantina_itens": {
+                  Row: {
+                    "cantina_id": string,"created_at": string,"descricao": string | null,"id": string,"nome": string,"ordem": number,"preco": number | null,"quantidade_disponivel": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantina_id": string,"created_at"?: string,"descricao"?: string | null,"id"?: string,"nome": string,"ordem"?: number,"preco"?: number | null,"quantidade_disponivel"?: number | null
+                  }
+                  Update: {
+                    "cantina_id"?: string,"created_at"?: string,"descricao"?: string | null,"id"?: string,"nome"?: string,"ordem"?: number,"preco"?: number | null,"quantidade_disponivel"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_cantina_itens_cantina_id_fkey"
+      columns: ["cantina_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_cantina_escalas"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"koinonia_cantina_reservas": {
+                  Row: {
+                    "created_at": string,"id": string,"item_id": string,"modo": Database["public"]['Enums']["koinonia_cantina_modo"],"observacao": string | null,"profile_id": string,"quantidade": number,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"item_id": string,"modo": Database["public"]['Enums']["koinonia_cantina_modo"],"observacao"?: string | null,"profile_id": string,"quantidade": number,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"item_id"?: string,"modo"?: Database["public"]['Enums']["koinonia_cantina_modo"],"observacao"?: string | null,"profile_id"?: string,"quantidade"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_cantina_reservas_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_cantina_itens"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_cantina_reservas_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_cantina_reservas_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -785,6 +877,9 @@ isOneToOne: false
 "fertex_finalizar_compra":
 { Args: { "p_itens": Json }; Returns: string
                            },
+"fertex_lucro":
+{ Args: { "p_comissao": number,"p_custo": number,"p_preco_unitario": number,"p_quantidade": number,"p_tipo": Database["public"]['Enums']["fertex_tipo_ganho"] }; Returns: number
+                           },
 "fertex_meus_pedidos":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -811,7 +906,7 @@ isOneToOne: false
                            },
 "fertex_vendas_vendedor":
 { Args: { "p_fim"?: string,"p_inicio"?: string,"p_produto_id"?: string }; Returns: {
-              "comprador_nome": string,"cor": string,"data": string,"forma_pagamento": Database["public"]['Enums']["fertex_forma_pagamento"],"item_id": string,"origem": Database["public"]['Enums']["fertex_origem_pedido"],"pedido_id": string,"prazo_pagamento": string,"preco_unitario": number,"produto_id": string,"produto_nome": string,"quantidade": number,"total": number,"unidade": Database["public"]['Enums']["fertex_unidade"]
+              "comprador_nome": string,"cor": string,"data": string,"forma_pagamento": Database["public"]['Enums']["fertex_forma_pagamento"],"item_id": string,"lucro": number,"origem": Database["public"]['Enums']["fertex_origem_pedido"],"pedido_id": string,"prazo_pagamento": string,"preco_unitario": number,"produto_id": string,"produto_nome": string,"quantidade": number,"tipo_ganho": Database["public"]['Enums']["fertex_tipo_ganho"],"total": number,"unidade": Database["public"]['Enums']["fertex_unidade"]
             }[]
                            },
 "fertex_vendedores_publicos":
@@ -838,6 +933,14 @@ isOneToOne: false
 "koinonia_auth_user_id_por_email":
 { Args: { "p_email": string }; Returns: string
                            },
+"koinonia_cantina_disponibilidade":
+{ Args: { "p_cantina_id": string }; Returns: {
+              "item_id": string,"reservado": number
+            }[]
+                           },
+"koinonia_cantina_do_item":
+{ Args: { "p_item_id": string }; Returns: string
+                           },
 "koinonia_current_user_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["koinonia_user_role"]
                            },
@@ -849,6 +952,9 @@ isOneToOne: false
                            },
 "koinonia_is_admin_or_pastor":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"koinonia_is_equipe_cantina":
+{ Args: { "p_cantina_id": string }; Returns: boolean
                            },
 "koinonia_is_lider_of":
 { Args: { "p_ministerio_id": string }; Returns: boolean
@@ -917,7 +1023,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
+            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_tipo_ganho": "revenda"|"comissao","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_cantina_modo": "levar"|"comer_aqui","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1033,7 +1139,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
+            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_tipo_ganho": ["revenda", "comissao"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_cantina_modo": ["levar", "comer_aqui"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
           }
         }
 } as const

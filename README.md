@@ -170,6 +170,8 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1100_evento_inscricoes` | inscrições em eventos: pendente → membro avisa pagamento → responsável confirma |
 | `…1200_responsavel_ve_inscritos` | responsável pelo evento vê o contato dos inscritos |
 | `…1300_evento_pix_e_convidados` | chave PIX por evento (escondida do público) e inscrição de convidados sem conta |
+| `…1400_cantina_cardapio_reservas` | cardápio por data de cantina e reservas (quantidade, levar ou comer na igreja) |
+| `…1410_cantina_disponibilidade` | total reservado por item, sem expor quem reservou |
 
 ### Seed
 
@@ -234,6 +236,8 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Marcar líder de ministério | ✅ | ✅ | ❌ | ❌ |
 | CRUD GCs / colocar pessoas em GCs | ✅ | ✅ | ver e escolher o seu | ver e escolher o seu |
 | Escala e Cantina | ✅ | ✅ | ver | ver (destaca onde está escalado) |
+| Cardápio da cantina | ✅ | ✅ | se a equipe dele estiver escalada na data | se o GC/ministério dele estiver escalado |
+| Reservar na cantina | ✅ | ✅ | ✅ | ✅ |
 | Conteúdo do site | ✅ | ✅ | ❌ | ❌ |
 
 Regras automáticas:
@@ -242,7 +246,7 @@ Regras automáticas:
 - Ninguém altera o próprio papel nem desativa a si mesmo.
 - **Usuário inativo** não entra em `/app`, não pode ser escalado e não lê dados da área logada.
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
-- **Cantina**: uma escala por data, com GC, ministério ou os dois.
+- **Cantina**: uma escala por data, com GC, ministério ou os dois. A equipe escalada (participantes do GC e membros do ministério), PASTOR e ADMIN montam o cardápio (preço e estoque opcionais) e veem as reservas com totais por item. Qualquer membro reserva: quantidade e se vai levar para casa ou comer na igreja. Reservas valem até o dia da cantina e respeitam o estoque.
 - **Inscrições em eventos**: evento gratuito confirma na hora; evento pago fica pendente, o membro vê o PIX com o valor do evento, avisa "já paguei" e o responsável pelo evento (ou PASTOR/ADMIN) confirma. Inscrição confirmada só é cancelada pelo responsável. Cada evento pode ter a própria chave PIX; sem ela, vale a da igreja. O responsável também inscreve outras pessoas — membros com conta ou convidados sem conta (nome e celular). Integração com gateway de pagamento: futura.
 - **Colunas visíveis ao público**: o papel `anon` só lê as colunas de `koinonia_eventos` liberadas na migration 1300 (a chave PIX fica de fora). Uma coluna nova que deva aparecer no site precisa de `grant select (coluna) ... to anon`.
 - Contas do mesmo `auth.users` que não têm perfil Koinonia (outros apps) são levadas a completar o cadastro (entram como MEMBRO) e, até lá, não leem nenhum dado da área logada.
