@@ -5,6 +5,7 @@ import {
   GlobeIcon,
   HomeIcon,
   type LucideIcon,
+  MegaphoneIcon,
   UserIcon,
   UsersIcon,
   UsersRoundIcon,
@@ -23,6 +24,7 @@ export type MenuItem = {
 export const menuItems: MenuItem[] = [
   { href: "/app", label: "Início", icon: HomeIcon },
   { href: "/app/perfil", label: "Meu perfil", icon: UserIcon },
+  { href: "/app/avisos", label: "Avisos", icon: MegaphoneIcon },
   { href: "/app/eventos", label: "Eventos", icon: CalendarDaysIcon },
   { href: "/app/escala", label: "Escala", icon: ClipboardListIcon },
   { href: "/app/cantina", label: "Cantina", icon: CoffeeIcon },

@@ -9,7 +9,8 @@ export { urlDoStorage } from "@/lib/storage";
 /**
  * Dados do site público. Usam o client anônimo (sem cookies), então podem ser
  * cacheados e entram no HTML estático. A RLS de anon só libera eventos,
- * pastores ativos, projetos publicados e dados de contribuição.
+ * pastores ativos, projetos publicados, avisos públicos vigentes e dados de
+ * contribuição.
  */
 
 export type EventoPublico = Pick<
@@ -101,5 +102,20 @@ export async function getContribuicao() {
     .select("*")
     .maybeSingle();
   if (error) throw new Error(`Erro ao carregar dados de contribuição: ${error.message}`);
+  return data;
+}
+
+/** Avisos públicos ainda vigentes (a RLS de anon já filtra pela data de hoje em SP) */
+export async function getAvisos() {
+  "use cache";
+  cacheTag(TAGS.avisos);
+  // salvar/remover atualiza na hora (updateTag); o prazo de exibição vence em até 1h
+  cacheLife("hours");
+
+  const { data, error } = await createPublicClient()
+    .from("koinonia_avisos")
+    .select("id, titulo, mensagem, imagem_path")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`Erro ao carregar avisos: ${error.message}`);
   return data;
 }

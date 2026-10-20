@@ -5,4 +5,5 @@ export const TAGS = {
   pastores: "pastores",
   projetos: "projetos",
   contribuicao: "contribuicao",
+  avisos: "avisos",
 } as const;

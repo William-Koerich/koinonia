@@ -1,6 +1,7 @@
 import { CakeIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AvisoCard } from "@/components/app/aviso-card";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
+      <Avisos />
       <PedidosParaDecidir meuId={profile.id} />
       <InscricoesAConferir meuId={profile.id} />
       <MinhasInscricoes meuId={profile.id} />
@@ -44,6 +46,35 @@ export default async function DashboardPage() {
         {gerencia && <Aniversariantes />}
       </div>
     </>
+  );
+}
+
+/** Avisos vigentes da igreja (os mais recentes primeiro) */
+async function Avisos() {
+  const supabase = await createClient();
+  const { data: avisos } = await supabase
+    .from("koinonia_avisos")
+    .select("id, titulo, mensagem, imagem_path")
+    // ADMIN/PASTOR também recebem os vencidos pela RLS: filtra aqui
+    .or(`exibir_ate.is.null,exibir_ate.gte.${hojeISO()}`)
+    .order("created_at", { ascending: false })
+    .limit(4);
+  if (!avisos?.length) return null;
+
+  return (
+    <section className="mb-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-heading text-lg font-semibold">Avisos</h2>
+        <Link href="/app/avisos" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+          Ver todos
+        </Link>
+      </div>
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        {avisos.map((a) => (
+          <AvisoCard key={a.id} aviso={a} />
+        ))}
+      </div>
+    </section>
   );
 }
 

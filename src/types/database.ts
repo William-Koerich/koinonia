@@ -231,6 +231,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_avisos": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"exibir_ate": string | null,"id": string,"imagem_path": string | null,"mensagem": string | null,"publico": boolean,"titulo": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"exibir_ate"?: string | null,"id"?: string,"imagem_path"?: string | null,"mensagem"?: string | null,"publico"?: boolean,"titulo": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"exibir_ate"?: string | null,"id"?: string,"imagem_path"?: string | null,"mensagem"?: string | null,"publico"?: boolean,"titulo"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_avisos_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_avisos_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_cantina_escalas": {
                   Row: {
                     "created_at": string,"data": string,"descricao": string | null,"gc_id": string | null,"id": string,"ministerio_id": string | null
@@ -932,6 +958,9 @@ isOneToOne: false
       } },
 "koinonia_auth_user_id_por_email":
 { Args: { "p_email": string }; Returns: string
+                           },
+"koinonia_aviso_vigente":
+{ Args: { "p_exibir_ate": string }; Returns: boolean
                            },
 "koinonia_cantina_disponibilidade":
 { Args: { "p_cantina_id": string }; Returns: {

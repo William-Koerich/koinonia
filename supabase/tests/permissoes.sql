@@ -332,6 +332,29 @@ select koinonia_teste_ok(count(*) = 1, 'altera a própria reserva') from u;
 reset role;
 
 \echo
+\echo '== Avisos'
+select set_config('request.jwt.claims', '', true);
+-- a1: público e vigente; a2: só membros; a3: público, mas já venceu
+insert into public.koinonia_avisos (id, titulo, publico, exibir_ate) values
+  ('99999999-0000-4000-a000-0000000000a1', 'Aviso Teste Público', true, current_date + 3),
+  ('99999999-0000-4000-a000-0000000000a2', 'Aviso Teste Membros', false, null),
+  ('99999999-0000-4000-a000-0000000000a3', 'Aviso Teste Vencido', true, current_date - 2);
+set local role anon;
+select koinonia_teste_ok((select array_agg(titulo order by titulo) from koinonia_avisos where titulo like 'Aviso Teste%') = array['Aviso Teste Público'],
+  'anon vê só o aviso público vigente');
+reset role;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select array_agg(titulo order by titulo) from koinonia_avisos where titulo like 'Aviso Teste%') = array['Aviso Teste Membros', 'Aviso Teste Público'],
+  'membro vê os vigentes (inclusive só para membros), não os vencidos');
+select koinonia_teste_bloqueia($$insert into koinonia_avisos (titulo) values ('Aviso Intruso')$$, 'membro não publica aviso');
+with u as (update koinonia_avisos set titulo = 'Editado' where id = '99999999-0000-4000-a000-0000000000a1' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'membro não edita aviso') from u;
+with d as (delete from koinonia_avisos where id = '99999999-0000-4000-a000-0000000000a1' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'membro não remove aviso') from d;
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';
@@ -340,6 +363,7 @@ set local role authenticated;
 select koinonia_teste_ok((select count(*) from koinonia_profiles where id = auth.uid()) = 1, 'ainda vê o próprio perfil (tela de conta inativa)');
 select koinonia_teste_ok((select count(*) from koinonia_gcs) = 0, 'não vê GCs');
 select koinonia_teste_ok((select count(*) from koinonia_perfis_basicos) = 0, 'não vê nomes de membros');
+select koinonia_teste_ok((select count(*) from koinonia_avisos where titulo = 'Aviso Teste Membros') = 0, 'não vê avisos só para membros');
 with u as (update koinonia_profiles set nome_completo = 'Inativo Editando' where id = auth.uid() returning 1)
 select koinonia_teste_ok(count(*) = 0, 'não edita o próprio perfil') from u;
 reset role;
@@ -360,6 +384,11 @@ select koinonia_teste_ok(count(*) = 1, 'desativa um membro') from u;
 update koinonia_profiles set ativo = true where id = current_setting('teste.membro')::uuid;
 with i as (insert into koinonia_ministerios (nome) values ('Ministério Teste') returning 1)
 select koinonia_teste_ok(count(*) = 1, 'cria ministério') from i;
+select koinonia_teste_ok((select count(*) from koinonia_avisos where titulo like 'Aviso Teste%') = 3, 'vê todos os avisos, inclusive vencidos');
+with i as (insert into koinonia_avisos (titulo, mensagem) values ('Aviso Teste Culto 9h', 'Por causa das eleições') returning created_by)
+select koinonia_teste_ok((select created_by from i) = auth.uid(), 'publica aviso (com autor)');
+with u as (update koinonia_avisos set exibir_ate = current_date where id = '99999999-0000-4000-a000-0000000000a2' returning 1)
+select koinonia_teste_ok(count(*) = 1, 'edita aviso') from u;
 with i as (insert into koinonia_gcs (nome, cep, logradouro, numero, bairro, cidade, uf) values ('GC Teste', '01310100', 'a', '1', 'b', 'c', 'SP') returning 1)
 select koinonia_teste_ok(count(*) = 1, 'cria GC') from i;
 with u as (update koinonia_eventos set titulo = 'Evento Editado' where id = '99999999-0000-4000-a000-000000000001' returning 1)

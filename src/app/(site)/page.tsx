@@ -1,4 +1,5 @@
-import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowRightIcon, MegaphoneIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { ListaEventos } from "@/components/site/evento-linha";
 import { Foto } from "@/components/site/foto";
@@ -8,15 +9,16 @@ import { TextReveal } from "@/components/site/fx/text-reveal";
 import { Rotulo, Tela } from "@/components/site/tela";
 import { linkWhatsApp } from "@/components/site/whatsapp";
 import { siteConfig } from "@/config/site";
-import { getProximosEventos } from "@/lib/data/site";
+import { getAvisos, getProximosEventos, urlDoStorage } from "@/lib/data/site";
 import { imagens } from "@/lib/imagens";
 
 export default async function HomePage() {
-  const eventos = await getProximosEventos(3);
+  const [eventos, avisos] = await Promise.all([getProximosEventos(3), getAvisos()]);
 
   return (
     <>
-      <Abertura />
+      <Abertura aviso={avisos[0]} />
+      {avisos.length > 0 && <Avisos avisos={avisos} />}
       <Versiculo />
       <QuemSomos />
       <Cultos />
@@ -38,12 +40,29 @@ function LinkSeta({ href, children }: { href: string; children: React.ReactNode 
 
 /* ---------------------------------------------------------------- abertura */
 
-function Abertura() {
+type Aviso = Awaited<ReturnType<typeof getAvisos>>[number];
+
+function Abertura({ aviso }: { aviso?: Aviso }) {
   // o tema vira duas linhas: "Quem serve" / "vê Deus." (a segunda em itálico)
   const [inicio, fim] = siteConfig.tema.split(" vê ");
 
   return (
     <Tela imagem={imagens.eventosAdoracao} posicao="center 40%" prioridade className="justify-end" conteudoClassName="pb-16 sm:pb-20">
+      {/* o aviso mais recente aparece logo na primeira tela */}
+      {aviso && (
+        <Reveal className="mb-10">
+          <Link
+            href="#avisos"
+            className="group inline-flex max-w-full items-center gap-3 rounded-full bg-creme/95 py-2 pr-4 pl-2 text-sm text-tinta shadow-sm transition-colors hover:bg-white"
+          >
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-destaque px-3 py-1 text-xs font-medium text-white">
+              <MegaphoneIcon className="size-3.5" /> Aviso
+            </span>
+            <span className="truncate font-medium">{aviso.titulo}</span>
+            <ArrowDownIcon className="size-4 shrink-0 transition-transform group-hover:translate-y-0.5" />
+          </Link>
+        </Reveal>
+      )}
       <Reveal>
         <p className="mb-6 text-xs font-medium tracking-[0.25em] text-white/80 uppercase">{siteConfig.nome}</p>
       </Reveal>
@@ -71,6 +90,41 @@ function Abertura() {
             Horários <ArrowDownIcon className="size-4" />
           </Link>
         </Reveal>
+      </div>
+    </Tela>
+  );
+}
+
+/* ------------------------------------------------------------------ avisos */
+
+function Avisos({ avisos }: { avisos: Aviso[] }) {
+  return (
+    <Tela id="avisos" fundo="branco">
+      <Reveal className="mb-12">
+        <Rotulo>Avisos</Rotulo>
+        <h2 className="font-display text-5xl leading-[1.05] sm:text-6xl">Fique por dentro.</h2>
+      </Reveal>
+      <div className={avisos.length > 1 ? "grid items-start gap-6 md:grid-cols-2" : "max-w-3xl"}>
+        {avisos.map((a, i) => {
+          const imagem = urlDoStorage(a.imagem_path);
+          return (
+            <Reveal key={a.id} delay={0.08 * Math.min(i, 3)}>
+              <article className="overflow-hidden rounded-[2rem] border border-border bg-creme">
+                {imagem && (
+                  <div className="relative aspect-video bg-muted">
+                    <Image src={imagem} alt="" fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                  </div>
+                )}
+                <div className="p-7 sm:p-9">
+                  <h3 className="font-display text-3xl leading-tight sm:text-4xl">{a.titulo}</h3>
+                  {a.mensagem && (
+                    <p className="mt-4 text-lg leading-relaxed whitespace-pre-line text-muted-foreground">{a.mensagem}</p>
+                  )}
+                </div>
+              </article>
+            </Reveal>
+          );
+        })}
       </div>
     </Tela>
   );

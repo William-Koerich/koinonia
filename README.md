@@ -1,6 +1,6 @@
 # Koinonia
 
-Site institucional da igreja + área logada de gestão (membros, ministérios, GCs (Grupos Caseiros), eventos, escala de serviço e cantina).
+Site institucional da igreja + área logada de gestão (membros, ministérios, GCs (Grupos Caseiros), eventos, escala de serviço, cantina e avisos).
 
 - **Next.js 16** (App Router, Server Components, Server Actions, Cache Components) com TypeScript estrito
 - **Supabase**: Auth, Postgres com Row Level Security, Storage
@@ -27,7 +27,7 @@ Site institucional da igreja + área logada de gestão (membros, ministérios, G
 
 **Site público** — Home, Quem Somos, Pastores, Projetos (com página de detalhe), Eventos, Contribuição (PIX copia e cola + QR Code, dados bancários) e Contato. Pastores, projetos, eventos e dados de contribuição vêm do banco e são editados pela área logada. Tem metadata por página, Open Graph, `sitemap.xml` e `robots.txt`.
 
-**Área logada (`/app`)** — Início (minhas escalas, próximos eventos, aniversariantes), Meu perfil, Eventos, Escala, Cantina, Ministérios, GCs, Usuários e Conteúdo do site. O menu mostra só o que o papel do usuário permite.
+**Área logada (`/app`)** — Início (avisos, minhas escalas, próximos eventos, aniversariantes), Meu perfil, Avisos, Eventos, Escala, Cantina, Ministérios, GCs, Usuários e Conteúdo do site. O menu mostra só o que o papel do usuário permite.
 
 **Cadastro aberto, acesso liberado pela liderança.** Qualquer pessoa cria a própria conta em `/cadastro` e entra sempre como **MEMBRO**. ADMIN e PASTOR liberam os demais acessos: o PASTOR marca líderes de ministério (o que promove a LIDER_MINISTERIO automaticamente) e ativa/desativa contas; o ADMIN também define quem é PASTOR ou ADMIN. ADMIN/PASTOR ainda podem criar contas em **Usuários → Novo usuário**. Há recuperação de senha por e-mail.
 
@@ -172,6 +172,7 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1300_evento_pix_e_convidados` | chave PIX por evento (escondida do público) e inscrição de convidados sem conta |
 | `…1400_cantina_cardapio_reservas` | cardápio por data de cantina e reservas (quantidade, levar ou comer na igreja) |
 | `…1410_cantina_disponibilidade` | total reservado por item, sem expor quem reservou |
+| `…1500_avisos` | avisos da igreja (título, mensagem e imagem opcionais; público ou só membros; data de fim) |
 
 ### Seed
 
@@ -238,6 +239,8 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Escala e Cantina | ✅ | ✅ | ver | ver (destaca onde está escalado) |
 | Cardápio da cantina | ✅ | ✅ | se a equipe dele estiver escalada na data | se o GC/ministério dele estiver escalado |
 | Reservar na cantina | ✅ | ✅ | ✅ | ✅ |
+| Ver avisos | ✅ (inclusive encerrados) | ✅ (inclusive encerrados) | vigentes | vigentes |
+| Publicar avisos | ✅ | ✅ | ❌ | ❌ |
 | Conteúdo do site | ✅ | ✅ | ❌ | ❌ |
 
 Regras automáticas:
@@ -247,6 +250,7 @@ Regras automáticas:
 - **Usuário inativo** não entra em `/app`, não pode ser escalado e não lê dados da área logada.
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois. A equipe escalada (participantes do GC e membros do ministério), PASTOR e ADMIN montam o cardápio (preço e estoque opcionais) e veem as reservas com totais por item. Qualquer membro reserva: quantidade e se vai levar para casa ou comer na igreja. Reservas valem até o dia da cantina e respeitam o estoque.
+- **Avisos**: PASTOR e ADMIN publicam em **Avisos** (título obrigatório; mensagem e imagem opcionais). Aparecem no início da área logada e, se marcados como públicos, na home do site (o mais recente também em destaque na primeira tela). Com "Mostrar até" preenchido, o aviso some sozinho depois desse dia.
 - **Inscrições em eventos**: evento gratuito confirma na hora; evento pago fica pendente, o membro vê o PIX com o valor do evento, avisa "já paguei" e o responsável pelo evento (ou PASTOR/ADMIN) confirma. Inscrição confirmada só é cancelada pelo responsável. Cada evento pode ter a própria chave PIX; sem ela, vale a da igreja. O responsável também inscreve outras pessoas — membros com conta ou convidados sem conta (nome e celular). Integração com gateway de pagamento: futura.
 - **Colunas visíveis ao público**: o papel `anon` só lê as colunas de `koinonia_eventos` liberadas na migration 1300 (a chave PIX fica de fora). Uma coluna nova que deva aparecer no site precisa de `grant select (coluna) ... to anon`.
 - Contas do mesmo `auth.users` que não têm perfil Koinonia (outros apps) são levadas a completar o cadastro (entram como MEMBRO) e, até lá, não leem nenhum dado da área logada.
@@ -274,6 +278,7 @@ Helpers SQL (`security definer`): `koinonia_current_user_role()`, `koinonia_is_a
 | Nome, horários de culto, endereço, mapa, WhatsApp, e-mail, redes | `src/config/site.ts` |
 | História, missão, visão, valores, declaração de fé | `src/config/institucional.ts` |
 | Pastores, projetos, PIX e dados bancários | Área logada → **Conteúdo do site** |
+| Avisos (home do site e área logada) | Área logada → **Avisos** |
 | Funções e vagas da escala | Tabela `koinonia_escala_funcoes` (SQL Editor) |
 | Cores e tema | `src/app/globals.css` (variáveis do shadcn/ui; o site público usa o escopo `.site`) |
 | Fotos de fundo do site | `public/images/site/` — substitua o arquivo mantendo o nome (mapeadas em `src/lib/imagens.ts`) |
