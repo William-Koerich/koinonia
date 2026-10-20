@@ -29,7 +29,7 @@ Site institucional da igreja + área logada de gestão (membros, ministérios, G
 
 **Área logada (`/app`)** — Início (avisos, minhas escalas, próximos eventos, aniversariantes), Meu perfil, Avisos, Eventos, Escala, Cantina, Ministérios, GCs, Usuários e Conteúdo do site. O menu mostra só o que o papel do usuário permite.
 
-**Cadastro aberto, acesso liberado pela liderança.** Qualquer pessoa cria a própria conta em `/cadastro` e entra sempre como **MEMBRO**. ADMIN e PASTOR liberam os demais acessos: o PASTOR marca líderes de ministério (o que promove a LIDER_MINISTERIO automaticamente) e ativa/desativa contas; o ADMIN também define quem é PASTOR ou ADMIN. ADMIN/PASTOR ainda podem criar contas em **Usuários → Novo usuário**. Há recuperação de senha por e-mail.
+**Cadastro aberto, acesso liberado pela liderança.** Qualquer pessoa cria a própria conta em `/cadastro` e entra sempre como **MEMBRO**. Não há confirmação por e-mail: a conta é criada pelo servidor (chave secreta) já confirmada e a pessoa vai direto para o login. A opção *Confirm email* do Supabase continua ligada porque vale para os outros apps do projeto. ADMIN e PASTOR liberam os demais acessos: o PASTOR marca líderes de ministério (o que promove a LIDER_MINISTERIO automaticamente) e ativa/desativa contas; o ADMIN também define quem é PASTOR ou ADMIN. ADMIN/PASTOR ainda podem criar contas em **Usuários → Novo usuário**. Há recuperação de senha por e-mail.
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle2Icon } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useTransition } from "react";
@@ -17,11 +18,12 @@ export function EntrarForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? undefined;
   const erroLink = searchParams.get("erro") === "link";
+  const contaCriada = searchParams.get("cadastro") === "ok";
   const [pending, startTransition] = useTransition();
 
   const form = useForm<EntrarInput>({
     resolver: zodResolver(entrarSchema),
-    defaultValues: { email: "", senha: "" },
+    defaultValues: { email: searchParams.get("email") ?? "", senha: "" },
   });
   const { errors } = form.formState;
 
@@ -42,6 +44,12 @@ export function EntrarForm() {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
       <FieldGroup>
+        {contaCriada && (
+          <p className="flex items-start gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm">
+            <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+            Conta criada! Entre com seu e-mail e senha.
+          </p>
+        )}
         <Field data-invalid={!!errors.email}>
           <FieldLabel htmlFor="email">E-mail</FieldLabel>
           <Input

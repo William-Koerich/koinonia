@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { siteConfig } from "@/config/site";
 import { getUserId } from "@/lib/auth";
 import { erroValidacao, mensagemErroAuth, mensagemErroBanco } from "@/lib/errors";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
 import {
@@ -56,16 +57,16 @@ export async function cadastrar(input: CadastroInput): Promise<ActionResult> {
   if (!parsed.success) return erroValidacao(parsed.error);
   const { email, senha, nome_completo, celular, data_nascimento, genero } = parsed.data;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
+  // Criada pelo servidor já com o e-mail confirmado: sem link de confirmação.
+  // (A opção "Confirm email" do Supabase vale para todos os apps do projeto,
+  // por isso não é desligada lá.)
+  const { error } = await createAdminClient().auth.admin.createUser({
     email,
     password: senha,
-    options: {
-      emailRedirectTo: `${await origem()}/auth/callback?next=/app`,
-      // "app" faz o trigger koinonia_handle_new_user criar o perfil (sempre
-      // MEMBRO); auth.users é compartilhado com outros apps
-      data: { app: "koinonia", nome: nome_completo, nome_completo, celular, data_nascimento, genero },
-    },
+    email_confirm: true,
+    // "app" faz o trigger koinonia_handle_new_user criar o perfil (sempre
+    // MEMBRO); auth.users é compartilhado com outros apps
+    user_metadata: { app: "koinonia", nome: nome_completo, nome_completo, celular, data_nascimento, genero },
   });
   if (error) {
     return error.code === "user_already_exists" || error.code === "email_exists"
@@ -73,12 +74,7 @@ export async function cadastrar(input: CadastroInput): Promise<ActionResult> {
       : { ok: false, error: mensagemErroAuth(error) };
   }
 
-  // Com confirmação de e-mail ligada, e-mail já cadastrado volta sem erro e sem
-  // identidades (o Supabase não revela quem tem conta)
-  if (data.user && data.user.identities?.length === 0) return { ok: false, error: JA_TEM_CONTA };
-
-  if (data.session) redirect("/app");
-  return { ok: true, message: "Conta criada! Enviamos um link de confirmação para o seu e-mail." };
+  redirect(`/entrar?cadastro=ok&email=${encodeURIComponent(email)}`);
 }
 
 const JA_TEM_CONTA =

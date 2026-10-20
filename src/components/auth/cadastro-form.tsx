@@ -1,8 +1,6 @@
 "use client";
 
-import { MailCheckIcon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { FormProvider } from "react-hook-form";
 import { cadastrar } from "@/app/(auth)/actions";
 import { PerfilFields } from "@/components/forms/perfil-fields";
@@ -13,8 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cadastroSchema } from "@/lib/validation/auth";
 
 export function CadastroForm() {
-  const [confirmacaoEnviada, setConfirmacaoEnviada] = useState(false);
-
+  // sucesso: a action redireciona para /entrar
   const { form, pending, onSubmit } = useActionForm({
     schema: cadastroSchema,
     defaultValues: {
@@ -26,23 +23,8 @@ export function CadastroForm() {
       confirmarSenha: "",
     },
     action: cadastrar,
-    // sem sessão na resposta = confirmação de e-mail ligada no Supabase
-    onSuccess: () => setConfirmacaoEnviada(true),
   });
   const { errors } = form.formState;
-
-  if (confirmacaoEnviada) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-4 text-center">
-        <MailCheckIcon className="size-10 text-primary" />
-        <p className="font-medium">Confira seu e-mail</p>
-        <p className="text-sm text-muted-foreground">
-          Enviamos um link de confirmação para <strong>{form.getValues("email")}</strong>. Clique nele para ativar
-          sua conta.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <FormProvider {...form}>
