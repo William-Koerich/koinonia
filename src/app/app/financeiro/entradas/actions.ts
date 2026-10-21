@@ -20,7 +20,7 @@ export async function salvarEntrada(id: string | null, input: EntradaInput): Pro
     : await supabase.from("koinonia_financeiro_entradas").insert(parsed.data);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
-  revalidatePath("/app/financeiro");
+  revalidatePath("/app/financeiro/entradas");
   return { ok: true, message: id ? "Entrada atualizada." : "Entrada registrada." };
 }
 
@@ -31,6 +31,6 @@ export async function excluirEntrada(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("koinonia_financeiro_entradas").delete().eq("id", id);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
-  revalidatePath("/app/financeiro");
+  revalidatePath("/app/financeiro/entradas");
   return { ok: true, message: "Entrada excluída." };
 }

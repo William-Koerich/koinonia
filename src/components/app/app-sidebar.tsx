@@ -1,8 +1,9 @@
 "use client";
 
-import { LogOutIcon } from "lucide-react";
+import { ChevronRightIcon, LogOutIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { sair } from "@/app/(auth)/actions";
 import {
   Sidebar,
@@ -14,12 +15,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { siteConfig } from "@/config/site";
 import { ROLE_LABEL } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
-import { menuItems } from "./menu-items";
+import { type MenuItem, menuItems } from "./menu-items";
 
 export function AppSidebar({ nome, role }: { nome: string; role: Role }) {
   const pathname = usePathname();
@@ -40,6 +44,17 @@ export function AppSidebar({ nome, role }: { nome: string; role: Role }) {
               {itens.map((item) => {
                 const ativo =
                   item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href);
+                if (item.subitens) {
+                  return (
+                    <GrupoMenu
+                      key={item.href}
+                      item={item}
+                      ativo={ativo}
+                      pathname={pathname}
+                      aoNavegar={() => setOpenMobile(false)}
+                    />
+                  );
+                }
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={ativo}>
@@ -68,5 +83,48 @@ export function AppSidebar({ nome, role }: { nome: string; role: Role }) {
         </form>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+/** Item com subitens: abre/fecha ao clicar; começa aberto se a rota atual está dentro dele */
+function GrupoMenu({
+  item,
+  ativo,
+  pathname,
+  aoNavegar,
+}: {
+  item: MenuItem;
+  ativo: boolean;
+  pathname: string;
+  aoNavegar: () => void;
+}) {
+  const [aberto, setAberto] = useState(ativo);
+  const expandido = aberto || ativo;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={ativo && !expandido}
+        aria-expanded={expandido}
+        onClick={() => setAberto(!expandido)}
+      >
+        <item.icon />
+        <span>{item.label}</span>
+        <ChevronRightIcon className={`ml-auto transition-transform ${expandido ? "rotate-90" : ""}`} />
+      </SidebarMenuButton>
+      {expandido && (
+        <SidebarMenuSub>
+          {item.subitens?.map((sub) => (
+            <SidebarMenuSubItem key={sub.href}>
+              <SidebarMenuSubButton asChild isActive={pathname.startsWith(sub.href)}>
+                <Link href={sub.href} onClick={aoNavegar}>
+                  <span>{sub.label}</span>
+                </Link>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+          ))}
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
   );
 }

@@ -21,6 +21,8 @@ export type MenuItem = {
   icon: LucideIcon;
   /** Papéis que veem o item; ausente = todos */
   roles?: Role[];
+  /** Com subitens, o item vira um grupo que abre e fecha (href = prefixo das rotas) */
+  subitens?: { href: string; label: string }[];
 };
 
 export const menuItems: MenuItem[] = [
@@ -32,7 +34,16 @@ export const menuItems: MenuItem[] = [
   { href: "/app/cantina", label: "Cantina", icon: CoffeeIcon },
   { href: "/app/ministerios", label: "Ministérios", icon: WaypointsIcon },
   { href: "/app/gcs", label: "GCs", icon: UsersRoundIcon },
-  { href: "/app/financeiro", label: "Financeiro", icon: WalletIcon, roles: ROLES_FINANCEIRO },
+  {
+    href: "/app/financeiro",
+    label: "Financeiro",
+    icon: WalletIcon,
+    roles: ROLES_FINANCEIRO,
+    subitens: [
+      { href: "/app/financeiro/entradas", label: "Entradas" },
+      { href: "/app/financeiro/contas-a-pagar", label: "Contas a pagar" },
+    ],
+  },
   { href: "/app/usuarios", label: "Usuários", icon: UsersIcon, roles: ["ADMIN", "PASTOR"] },
   { href: "/app/conteudo", label: "Conteúdo do site", icon: GlobeIcon, roles: ["ADMIN", "PASTOR"] },
 ];

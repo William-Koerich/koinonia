@@ -527,6 +527,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_financeiro_contas": {
+                  Row: {
+                    "categoria": Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at": string,"created_by": string | null,"descricao": string,"forma_pagamento": Database["public"]['Enums']["koinonia_forma_pagamento"] | null,"fornecedor": string | null,"id": string,"observacao": string | null,"ocorrencia": number | null,"pago_em": string | null,"recorrencia_id": string | null,"status": Database["public"]['Enums']["koinonia_conta_status"],"updated_at": string,"valor": number,"valor_pago": number | null,"vencimento": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "categoria": Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at"?: string,"created_by"?: string | null,"descricao": string,"forma_pagamento"?: Database["public"]['Enums']["koinonia_forma_pagamento"] | null,"fornecedor"?: string | null,"id"?: string,"observacao"?: string | null,"ocorrencia"?: number | null,"pago_em"?: string | null,"recorrencia_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_conta_status"],"updated_at"?: string,"valor": number,"valor_pago"?: number | null,"vencimento": string
+                  }
+                  Update: {
+                    "categoria"?: Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at"?: string,"created_by"?: string | null,"descricao"?: string,"forma_pagamento"?: Database["public"]['Enums']["koinonia_forma_pagamento"] | null,"fornecedor"?: string | null,"id"?: string,"observacao"?: string | null,"ocorrencia"?: number | null,"pago_em"?: string | null,"recorrencia_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_conta_status"],"updated_at"?: string,"valor"?: number,"valor_pago"?: number | null,"vencimento"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_financeiro_contas_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_financeiro_contas_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_financeiro_contas_recorrencia_id_fkey"
+      columns: ["recorrencia_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_financeiro_recorrencias"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_financeiro_entradas": {
                   Row: {
                     "categoria": Database["public"]['Enums']["koinonia_entrada_categoria"],"contribuinte_nome": string | null,"created_at": string,"created_by": string | null,"data": string,"descricao": string | null,"forma_pagamento": Database["public"]['Enums']["koinonia_forma_pagamento"],"id": string,"profile_id": string | null,"updated_at": string,"valor": number
@@ -560,6 +592,32 @@ isOneToOne: false
     },{
       foreignKeyName: "koinonia_financeiro_entradas_profile_id_fkey"
       columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"koinonia_financeiro_recorrencias": {
+                  Row: {
+                    "ativa": boolean,"categoria": Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at": string,"created_by": string | null,"data_fim": string | null,"data_inicio": string,"descricao": string,"fornecedor": string | null,"frequencia": Database["public"]['Enums']["koinonia_recorrencia_frequencia"],"id": string,"observacao": string | null,"parcelas": number | null,"updated_at": string,"valor": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ativa"?: boolean,"categoria": Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at"?: string,"created_by"?: string | null,"data_fim"?: string | null,"data_inicio": string,"descricao": string,"fornecedor"?: string | null,"frequencia": Database["public"]['Enums']["koinonia_recorrencia_frequencia"],"id"?: string,"observacao"?: string | null,"parcelas"?: number | null,"updated_at"?: string,"valor": number
+                  }
+                  Update: {
+                    "ativa"?: boolean,"categoria"?: Database["public"]['Enums']["koinonia_despesa_categoria"],"created_at"?: string,"created_by"?: string | null,"data_fim"?: string | null,"data_inicio"?: string,"descricao"?: string,"fornecedor"?: string | null,"frequencia"?: Database["public"]['Enums']["koinonia_recorrencia_frequencia"],"id"?: string,"observacao"?: string | null,"parcelas"?: number | null,"updated_at"?: string,"valor"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_financeiro_recorrencias_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_financeiro_recorrencias_created_by_fkey"
+      columns: ["created_by"]
 isOneToOne: false
       referencedRelation: "koinonia_profiles"
       referencedColumns: ["id"]
@@ -1011,6 +1069,12 @@ isOneToOne: false
 "koinonia_current_user_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["koinonia_user_role"]
                            },
+"koinonia_financeiro_gerar_contas":
+{ Args: { "p_ate": string }; Returns: number
+                           },
+"koinonia_financeiro_vencimento":
+{ Args: { "p_frequencia": Database["public"]['Enums']["koinonia_recorrencia_frequencia"],"p_inicio": string,"p_n": number }; Returns: string
+                           },
 "koinonia_informar_pagamento":
 { Args: { "p_evento_id": string }; Returns: undefined
                            },
@@ -1093,7 +1157,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_tipo_ganho": "revenda"|"comissao","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_cantina_modo": "levar"|"comer_aqui","koinonia_entrada_categoria": "dizimo"|"oferta"|"primicias"|"doacao"|"outra","koinonia_forma_pagamento": "pix"|"dinheiro"|"cartao"|"transferencia"|"outra","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
+            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_tipo_ganho": "revenda"|"comissao","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_cantina_modo": "levar"|"comer_aqui","koinonia_conta_status": "pendente"|"paga"|"cancelada","koinonia_despesa_categoria": "aluguel"|"energia"|"agua"|"internet_telefone"|"salarios"|"manutencao"|"materiais"|"impostos_taxas"|"missoes"|"eventos"|"outra","koinonia_entrada_categoria": "dizimo"|"oferta"|"primicias"|"doacao"|"outra","koinonia_forma_pagamento": "pix"|"dinheiro"|"cartao"|"transferencia"|"outra","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_recorrencia_frequencia": "semanal"|"quinzenal"|"mensal"|"bimestral"|"trimestral"|"semestral"|"anual","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1209,7 +1273,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_tipo_ganho": ["revenda", "comissao"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_cantina_modo": ["levar", "comer_aqui"],"koinonia_entrada_categoria": ["dizimo", "oferta", "primicias", "doacao", "outra"],"koinonia_forma_pagamento": ["pix", "dinheiro", "cartao", "transferencia", "outra"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
+            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_tipo_ganho": ["revenda", "comissao"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_cantina_modo": ["levar", "comer_aqui"],"koinonia_conta_status": ["pendente", "paga", "cancelada"],"koinonia_despesa_categoria": ["aluguel", "energia", "agua", "internet_telefone", "salarios", "manutencao", "materiais", "impostos_taxas", "missoes", "eventos", "outra"],"koinonia_entrada_categoria": ["dizimo", "oferta", "primicias", "doacao", "outra"],"koinonia_forma_pagamento": ["pix", "dinheiro", "cartao", "transferencia", "outra"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_recorrencia_frequencia": ["semanal", "quinzenal", "mensal", "bimestral", "trimestral", "semestral", "anual"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
           }
         }
 } as const

@@ -381,6 +381,47 @@ select koinonia_teste_bloqueia(format($$insert into koinonia_financeiro_entradas
 reset role;
 
 \echo
+\echo '== Financeiro: contas a pagar e recorrências'
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$select koinonia_financeiro_gerar_contas(current_date)$$, 'membro não gera contas recorrentes');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_contas (descricao, categoria, valor, vencimento) values ('Intrusa', 'outra', 10, current_date)$$,
+  'membro não lança conta');
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_recorrencias) = 0, 'membro não vê recorrências');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+-- r1: parcelada em 3x, mensal; r2: semanal sem fim; r3: mensal até daqui a 2 meses
+insert into koinonia_financeiro_recorrencias (id, descricao, categoria, valor, frequencia, data_inicio, parcelas) values
+  ('99999999-0000-4000-a000-0000000000b1', 'Teste Parcelado', 'materiais', 100, 'mensal', '2030-01-31', 3);
+insert into koinonia_financeiro_recorrencias (id, descricao, categoria, valor, frequencia, data_inicio) values
+  ('99999999-0000-4000-a000-0000000000b2', 'Teste Semanal', 'outra', 10, 'semanal', current_date);
+insert into koinonia_financeiro_recorrencias (id, descricao, categoria, valor, frequencia, data_inicio, data_fim) values
+  ('99999999-0000-4000-a000-0000000000b3', 'Teste Até Data', 'aluguel', 1000, 'mensal', current_date, current_date + 61);
+select koinonia_financeiro_gerar_contas('2030-12-31');
+select koinonia_teste_ok((select array_agg(vencimento order by ocorrencia)::text from koinonia_financeiro_contas
+                          where recorrencia_id = '99999999-0000-4000-a000-0000000000b1') = '{2030-01-31,2030-02-28,2030-03-31}',
+  'parcelada em 3x gera 3 contas (dia 31 vira fim de mês)');
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_contas where recorrencia_id = '99999999-0000-4000-a000-0000000000b3') between 2 and 3,
+  'recorrência com data de fim para nela');
+select koinonia_teste_ok((select max(vencimento) from koinonia_financeiro_contas where recorrencia_id = '99999999-0000-4000-a000-0000000000b2')
+                          <= current_date + interval '5 years', 'recorrência sem fim gera no máximo 5 anos à frente');
+select koinonia_teste_ok(koinonia_financeiro_gerar_contas('2030-12-31') = 0, 'gerar de novo não duplica');
+update koinonia_financeiro_contas set status = 'cancelada' where recorrencia_id = '99999999-0000-4000-a000-0000000000b1' and ocorrencia = 2;
+update koinonia_financeiro_contas set vencimento = '2030-01-10' where recorrencia_id = '99999999-0000-4000-a000-0000000000b1' and ocorrencia = 1;
+select koinonia_financeiro_gerar_contas('2030-12-31');
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_contas where recorrencia_id = '99999999-0000-4000-a000-0000000000b1') = 3,
+  'conta cancelada ou com vencimento alterado não é gerada de novo');
+select koinonia_teste_bloqueia($$update koinonia_financeiro_contas set status = 'paga' where recorrencia_id = '99999999-0000-4000-a000-0000000000b1' and ocorrencia = 3$$,
+  'conta paga exige data e valor do pagamento');
+with u as (update koinonia_financeiro_contas set status = 'paga', pago_em = current_date, valor_pago = 102.50, forma_pagamento = 'pix'
+           where recorrencia_id = '99999999-0000-4000-a000-0000000000b1' and ocorrencia = 3 returning 1)
+select koinonia_teste_ok(count(*) = 1, 'registra pagamento (com valor diferente)') from u;
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_recorrencias (descricao, categoria, valor, frequencia, data_inicio, data_fim, parcelas)
+  values ('X', 'outra', 1, 'mensal', current_date, current_date + 30, 3)$$, 'não aceita data de fim e nº de vezes juntos');
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';
