@@ -355,6 +355,32 @@ select koinonia_teste_ok(count(*) = 0, 'membro não remove aviso') from d;
 reset role;
 
 \echo
+\echo '== Financeiro: entradas'
+select set_config('request.jwt.claims', '', true);
+insert into public.koinonia_financeiro_entradas (id, data, categoria, valor, forma_pagamento, profile_id) values
+  ('99999999-0000-4000-a000-0000000000f1', current_date, 'dizimo', 150.00, 'pix', :'membro_id');
+set local role anon;
+select koinonia_teste_bloqueia($$select * from koinonia_financeiro_entradas$$, 'anon não lê entradas');
+reset role;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_entradas) = 0, 'membro não vê entradas (nem o próprio dízimo)');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_entradas (data, categoria, valor, forma_pagamento) values (current_date, 'oferta', 10, 'dinheiro')$$,
+  'membro não lança entrada');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_entradas where id = '99999999-0000-4000-a000-0000000000f1') = 1, 'pastor vê entradas');
+with i as (insert into koinonia_financeiro_entradas (data, categoria, valor, forma_pagamento, contribuinte_nome)
+           values (current_date, 'doacao', 500, 'transferencia', 'Doador Externo') returning created_by)
+select koinonia_teste_ok((select created_by from i) = auth.uid(), 'pastor lança entrada (com autor)');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_entradas (data, categoria, valor, forma_pagamento) values (current_date, 'oferta', 0, 'pix')$$,
+  'valor precisa ser maior que zero');
+select koinonia_teste_bloqueia(format($$insert into koinonia_financeiro_entradas (data, categoria, valor, forma_pagamento, profile_id, contribuinte_nome)
+  values (current_date, 'oferta', 10, 'pix', %L, 'Fulano')$$, current_setting('teste.membro')), 'não aceita membro e nome livre juntos');
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';
@@ -409,6 +435,7 @@ select id, :'admin_id' from public.koinonia_ministerios where nome = 'Teste Mini
 select koinonia_teste_como('membro');
 set local role authenticated;
 select koinonia_teste_ok((select count(*) from koinonia_profiles) = 2, 'vê o próprio perfil e o dos membros do seu ministério');
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_entradas) = 0, 'líder não vê o financeiro');
 with d as (delete from koinonia_ministerio_membros mm using koinonia_ministerios m
            where m.id = mm.ministerio_id and m.nome = 'Teste Ministério A' and mm.profile_id = current_setting('teste.admin')::uuid returning 1)
 select koinonia_teste_ok(count(*) = 1, 'remove membro comum do seu ministério') from d;

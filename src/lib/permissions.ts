@@ -17,3 +17,6 @@ export function isAdmin(role: Role): boolean {
 export function isAdminOrPastor(role: Role): boolean {
   return role === "ADMIN" || role === "PASTOR";
 }
+
+/** Quem acessa o financeiro (espelha koinonia_pode_financeiro() no banco) */
+export const ROLES_FINANCEIRO: Role[] = ["ADMIN", "PASTOR"];
