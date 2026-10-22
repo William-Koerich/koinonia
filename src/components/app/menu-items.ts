@@ -1,4 +1,5 @@
 import {
+  BellIcon,
   CalendarDaysIcon,
   ClipboardListIcon,
   CoffeeIcon,
@@ -45,6 +46,7 @@ export const menuItems: MenuItem[] = [
       { href: "/app/financeiro/contas-a-pagar", label: "Contas a pagar" },
     ],
   },
+  { href: "/app/notificacoes", label: "Notificações", icon: BellIcon, roles: ["ADMIN", "PASTOR"] },
   { href: "/app/usuarios", label: "Usuários", icon: UsersIcon, roles: ["ADMIN", "PASTOR"] },
   { href: "/app/conteudo", label: "Conteúdo do site", icon: GlobeIcon, roles: ["ADMIN", "PASTOR"] },
 ];

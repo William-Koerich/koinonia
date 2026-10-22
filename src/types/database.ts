@@ -727,6 +727,46 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"koinonia_notificacao_config": {
+                  Row: {
+                    "aviso_ativo": boolean,"escala_ativo": boolean,"escala_dias_antes": number,"escala_horario": string,"evento_ao_cadastrar": boolean,"evento_dias_antes": (number)[],"evento_horario": string,"evento_minutos_antes": number,"evento_na_hora": boolean,"id": boolean,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "aviso_ativo"?: boolean,"escala_ativo"?: boolean,"escala_dias_antes"?: number,"escala_horario"?: string,"evento_ao_cadastrar"?: boolean,"evento_dias_antes"?: (number)[],"evento_horario"?: string,"evento_minutos_antes"?: number,"evento_na_hora"?: boolean,"id"?: boolean,"updated_at"?: string
+                  }
+                  Update: {
+                    "aviso_ativo"?: boolean,"escala_ativo"?: boolean,"escala_dias_antes"?: number,"escala_horario"?: string,"evento_ao_cadastrar"?: boolean,"evento_dias_antes"?: (number)[],"evento_horario"?: string,"evento_minutos_antes"?: number,"evento_na_hora"?: boolean,"id"?: boolean,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"koinonia_notificacoes": {
+                  Row: {
+                    "agendada_para": string,"chave": string | null,"created_at": string,"created_by": string | null,"enviada_em": string | null,"enviadas": number,"falhas": number,"id": string,"mensagem": string | null,"origem": Database["public"]['Enums']["koinonia_notificacao_origem"],"publico": Database["public"]['Enums']["koinonia_notificacao_publico"],"publico_id": string | null,"status": Database["public"]['Enums']["koinonia_notificacao_status"],"titulo": string,"url": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agendada_para"?: string,"chave"?: string | null,"created_at"?: string,"created_by"?: string | null,"enviada_em"?: string | null,"enviadas"?: number,"falhas"?: number,"id"?: string,"mensagem"?: string | null,"origem"?: Database["public"]['Enums']["koinonia_notificacao_origem"],"publico"?: Database["public"]['Enums']["koinonia_notificacao_publico"],"publico_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_notificacao_status"],"titulo": string,"url"?: string
+                  }
+                  Update: {
+                    "agendada_para"?: string,"chave"?: string | null,"created_at"?: string,"created_by"?: string | null,"enviada_em"?: string | null,"enviadas"?: number,"falhas"?: number,"id"?: string,"mensagem"?: string | null,"origem"?: Database["public"]['Enums']["koinonia_notificacao_origem"],"publico"?: Database["public"]['Enums']["koinonia_notificacao_publico"],"publico_id"?: string | null,"status"?: Database["public"]['Enums']["koinonia_notificacao_status"],"titulo"?: string,"url"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_notificacoes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_notificacoes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_pastores": {
                   Row: {
                     "ativo": boolean,"bio": string | null,"cargo": string,"created_at": string,"foto_path": string | null,"id": string,"nome": string,"ordem": number,"updated_at": string
@@ -794,6 +834,32 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"koinonia_push_inscricoes": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"id": string,"p256dh": string,"profile_id": string,"updated_at": string,"user_agent": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"id"?: string,"p256dh": string,"profile_id": string,"updated_at"?: string,"user_agent"?: string | null
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"p256dh"?: string,"profile_id"?: string,"updated_at"?: string,"user_agent"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_push_inscricoes_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_push_inscricoes_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"periferico_categorias": {
                   Row: {
@@ -1102,11 +1168,49 @@ isOneToOne: false
 "koinonia_is_responsavel_por_inscrito":
 { Args: { "p_profile_id": string }; Returns: boolean
                            },
+"koinonia_notificacao_destinos":
+{ Args: { "p_notificacao_id": string }; Returns: {
+              "auth": string,"endpoint": string,"inscricao_id": string,"p256dh": string
+            }[]
+                           },
+"koinonia_notificacoes_gerar_automaticas":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"koinonia_notificacoes_reservar":
+{ Args: { "p_limite"?: number }; Returns: {
+              "agendada_para": string,
+"chave": string | null,
+"created_at": string,
+"created_by": string | null,
+"enviada_em": string | null,
+"enviadas": number,
+"falhas": number,
+"id": string,
+"mensagem": string | null,
+"origem": Database["public"]['Enums']["koinonia_notificacao_origem"],
+"publico": Database["public"]['Enums']["koinonia_notificacao_publico"],
+"publico_id": string | null,
+"status": Database["public"]['Enums']["koinonia_notificacao_status"],
+"titulo": string,
+"url": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "koinonia_notificacoes"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "koinonia_participa_de":
 { Args: { "p_ministerio_id": string }; Returns: boolean
                            },
 "koinonia_pode_financeiro":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"koinonia_push_cancelar":
+{ Args: { "p_endpoint": string }; Returns: undefined
+                           },
+"koinonia_push_inscrever":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent": string }; Returns: undefined
                            },
 "koinonia_sincronizar_papel_lider":
 { Args: { "p_profile_id": string }; Returns: undefined
@@ -1157,7 +1261,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_tipo_ganho": "revenda"|"comissao","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_cantina_modo": "levar"|"comer_aqui","koinonia_conta_status": "pendente"|"paga"|"cancelada","koinonia_despesa_categoria": "aluguel"|"energia"|"agua"|"internet_telefone"|"salarios"|"manutencao"|"materiais"|"impostos_taxas"|"missoes"|"eventos"|"outra","koinonia_entrada_categoria": "dizimo"|"oferta"|"primicias"|"doacao"|"outra","koinonia_forma_pagamento": "pix"|"dinheiro"|"cartao"|"transferencia"|"outra","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_recorrencia_frequencia": "semanal"|"quinzenal"|"mensal"|"bimestral"|"trimestral"|"semestral"|"anual","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
+            "fertex_forma_pagamento": "pix"|"dinheiro"|"boleto"|"cheque","fertex_origem_pedido": "loja"|"manual"|"whatsapp","fertex_perfil": "vendedor"|"comprador","fertex_status_pedido": "pendente"|"concluido"|"cancelado","fertex_tipo_ganho": "revenda"|"comissao","fertex_unidade": "kg"|"litro"|"saco"|"unidade"|"caixa"|"rolo"|"metro","koinonia_cantina_modo": "levar"|"comer_aqui","koinonia_conta_status": "pendente"|"paga"|"cancelada","koinonia_despesa_categoria": "aluguel"|"energia"|"agua"|"internet_telefone"|"salarios"|"manutencao"|"materiais"|"impostos_taxas"|"missoes"|"eventos"|"outra","koinonia_entrada_categoria": "dizimo"|"oferta"|"primicias"|"doacao"|"outra","koinonia_forma_pagamento": "pix"|"dinheiro"|"cartao"|"transferencia"|"outra","koinonia_genero": "masculino"|"feminino","koinonia_inscricao_status": "pendente"|"confirmada"|"recusada","koinonia_notificacao_origem": "manual"|"aviso"|"evento"|"escala","koinonia_notificacao_publico": "todos"|"homens"|"mulheres"|"ministerio"|"gc"|"perfil","koinonia_notificacao_status": "agendada"|"enviando"|"enviada"|"cancelada","koinonia_projeto_status": "planejado"|"em_andamento"|"concluido","koinonia_publico_evento": "homens"|"mulheres"|"todos","koinonia_recorrencia_frequencia": "semanal"|"quinzenal"|"mensal"|"bimestral"|"trimestral"|"semestral"|"anual","koinonia_tipo_chave_pix": "cnpj"|"cpf"|"email"|"telefone"|"aleatoria","koinonia_user_role": "ADMIN"|"PASTOR"|"LIDER_MINISTERIO"|"MEMBRO","periferico_estado_conservacao": "novo"|"bom"|"regular"|"ruim"|"danificado","periferico_perfil": "admin"|"operador","periferico_status_item": "disponivel"|"emprestado"|"manutencao"|"baixado"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1273,7 +1377,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_tipo_ganho": ["revenda", "comissao"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_cantina_modo": ["levar", "comer_aqui"],"koinonia_conta_status": ["pendente", "paga", "cancelada"],"koinonia_despesa_categoria": ["aluguel", "energia", "agua", "internet_telefone", "salarios", "manutencao", "materiais", "impostos_taxas", "missoes", "eventos", "outra"],"koinonia_entrada_categoria": ["dizimo", "oferta", "primicias", "doacao", "outra"],"koinonia_forma_pagamento": ["pix", "dinheiro", "cartao", "transferencia", "outra"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_recorrencia_frequencia": ["semanal", "quinzenal", "mensal", "bimestral", "trimestral", "semestral", "anual"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
+            "fertex_forma_pagamento": ["pix", "dinheiro", "boleto", "cheque"],"fertex_origem_pedido": ["loja", "manual", "whatsapp"],"fertex_perfil": ["vendedor", "comprador"],"fertex_status_pedido": ["pendente", "concluido", "cancelado"],"fertex_tipo_ganho": ["revenda", "comissao"],"fertex_unidade": ["kg", "litro", "saco", "unidade", "caixa", "rolo", "metro"],"koinonia_cantina_modo": ["levar", "comer_aqui"],"koinonia_conta_status": ["pendente", "paga", "cancelada"],"koinonia_despesa_categoria": ["aluguel", "energia", "agua", "internet_telefone", "salarios", "manutencao", "materiais", "impostos_taxas", "missoes", "eventos", "outra"],"koinonia_entrada_categoria": ["dizimo", "oferta", "primicias", "doacao", "outra"],"koinonia_forma_pagamento": ["pix", "dinheiro", "cartao", "transferencia", "outra"],"koinonia_genero": ["masculino", "feminino"],"koinonia_inscricao_status": ["pendente", "confirmada", "recusada"],"koinonia_notificacao_origem": ["manual", "aviso", "evento", "escala"],"koinonia_notificacao_publico": ["todos", "homens", "mulheres", "ministerio", "gc", "perfil"],"koinonia_notificacao_status": ["agendada", "enviando", "enviada", "cancelada"],"koinonia_projeto_status": ["planejado", "em_andamento", "concluido"],"koinonia_publico_evento": ["homens", "mulheres", "todos"],"koinonia_recorrencia_frequencia": ["semanal", "quinzenal", "mensal", "bimestral", "trimestral", "semestral", "anual"],"koinonia_tipo_chave_pix": ["cnpj", "cpf", "email", "telefone", "aleatoria"],"koinonia_user_role": ["ADMIN", "PASTOR", "LIDER_MINISTERIO", "MEMBRO"],"periferico_estado_conservacao": ["novo", "bom", "regular", "ruim", "danificado"],"periferico_perfil": ["admin", "operador"],"periferico_status_item": ["disponivel", "emprestado", "manutencao", "baixado"]
           }
         }
 } as const

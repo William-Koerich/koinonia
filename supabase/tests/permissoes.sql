@@ -422,6 +422,63 @@ select koinonia_teste_bloqueia($$insert into koinonia_financeiro_recorrencias (d
 reset role;
 
 \echo
+\echo '== Notificações push'
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_push_inscrever('https://push.exemplo.test/membro-1', 'chave-p256dh', 'chave-auth', 'Teste');
+select koinonia_teste_ok((select count(*) from koinonia_push_inscricoes where endpoint = 'https://push.exemplo.test/membro-1' and profile_id = auth.uid()) = 1,
+  'membro ativa notificações no próprio aparelho');
+select koinonia_teste_ok((select count(*) from koinonia_notificacoes) = 0 and (select count(*) from koinonia_notificacao_config) = 0,
+  'membro não vê fila nem regras de notificação');
+select koinonia_teste_bloqueia($$insert into koinonia_notificacoes (titulo) values ('Intrusa')$$, 'membro não cria notificação');
+select koinonia_teste_bloqueia($$select koinonia_notificacoes_gerar_automaticas()$$, 'membro não roda o disparo');
+select koinonia_teste_bloqueia($$select * from koinonia_notificacao_destinos(gen_random_uuid())$$, 'membro não lê aparelhos dos outros');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+-- o mesmo aparelho, agora logado como pastor: passa a ser do pastor
+select koinonia_push_inscrever('https://push.exemplo.test/membro-1', 'chave-p256dh', 'chave-auth', 'Teste');
+select koinonia_teste_ok((select profile_id from koinonia_push_inscricoes where endpoint = 'https://push.exemplo.test/membro-1') = auth.uid(),
+  'aparelho que troca de login passa para a nova conta');
+with i as (insert into koinonia_notificacoes (titulo, publico) values ('Teste Manual', 'todos') returning created_by)
+select koinonia_teste_ok((select created_by from i) = auth.uid(), 'pastor cria notificação manual');
+select koinonia_teste_bloqueia($$insert into koinonia_notificacoes (titulo, publico) values ('Sem GC', 'gc')$$, 'público GC exige o GC');
+with u as (update koinonia_notificacao_config set escala_dias_antes = 3 returning 1)
+select koinonia_teste_ok(count(*) = 1, 'pastor altera as regras') from u;
+select koinonia_teste_bloqueia($$update koinonia_notificacao_config set evento_dias_antes = '{8}'$$, 'só aceita os dias de lembrete previstos');
+reset role;
+
+-- lembretes automáticos (rodam como o servidor): horário dos lembretes = 1 min atrás
+select set_config('request.jwt.claims', '', true);
+update public.koinonia_notificacao_config set
+  escala_ativo = true, escala_dias_antes = 6, escala_horario = ((now() at time zone 'America/Sao_Paulo') - interval '1 minute')::time,
+  evento_dias_antes = '{7}', evento_horario = ((now() at time zone 'America/Sao_Paulo') - interval '1 minute')::time, evento_na_hora = false;
+insert into public.koinonia_eventos (id, titulo, cep, logradouro, numero, bairro, cidade, uf, inicio, fim, publico, responsavel_id) values
+  ('99999999-0000-4000-a000-0000000000d1', 'Evento Notificação Teste', '89030410', 'Rua A', '1', 'Centro', 'Blumenau', 'SC',
+   (((now() at time zone 'America/Sao_Paulo')::date + 7) + time '23:00') at time zone 'America/Sao_Paulo',
+   (((now() at time zone 'America/Sao_Paulo')::date + 7) + time '23:30') at time zone 'America/Sao_Paulo', 'homens', :'admin_id');
+insert into public.koinonia_escalas (id, data, descricao) values
+  ('99999999-0000-4000-a000-0000000000d2', (now() at time zone 'America/Sao_Paulo')::date + 2, 'Culto Notificação Teste');
+insert into public.koinonia_escala_atribuicoes (escala_id, funcao_id, profile_id)
+select '99999999-0000-4000-a000-0000000000d2', id, :'membro_id' from public.koinonia_escala_funcoes where ativo order by ordem limit 1;
+select public.koinonia_notificacoes_gerar_automaticas();
+select koinonia_teste_ok((select publico::text from public.koinonia_notificacoes where chave = 'evento:99999999-0000-4000-a000-0000000000d1:d7') = 'homens',
+  'lembrete de 7 dias do evento entra na fila (com o público do evento)');
+select koinonia_teste_ok((select titulo from public.koinonia_notificacoes
+                          where origem = 'escala' and publico_id = :'membro_id' and url = '/app/escala/99999999-0000-4000-a000-0000000000d2') = 'Você está na escala em 2 dias',
+  'lembrete diário de escala para quem está escalado');
+select koinonia_teste_ok(public.koinonia_notificacoes_gerar_automaticas() = 0, 'gerar de novo não repete lembretes');
+insert into public.koinonia_push_inscricoes (profile_id, endpoint, p256dh, auth) values (:'membro_id', 'https://push.exemplo.test/membro-2', 'k', 'a');
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacao_destinos(
+                           (select id from public.koinonia_notificacoes where origem = 'escala' and publico_id = :'membro_id'))) = 1,
+  'lembrete de escala vai só para os aparelhos da pessoa');
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes_reservar(500) where titulo = 'Teste Manual') = 1,
+  'disparo pega o que está agendado até agora');
+select koinonia_teste_ok((select status::text from public.koinonia_notificacoes where titulo = 'Teste Manual') = 'enviando'
+                         and (select count(*) from public.koinonia_notificacoes_reservar(500) where titulo = 'Teste Manual') = 0,
+  'e não pega a mesma notificação duas vezes');
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';

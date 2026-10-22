@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { formatarDataHora } from "@/lib/format";
+import { notificarCriacao } from "@/lib/notificacoes";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
 import { eventoSchema, type EventoInput } from "@/lib/validation/evento";
@@ -16,10 +18,22 @@ export async function salvarEvento(id: string | null, input: EventoInput): Promi
   if (!parsed.success) return erroValidacao(parsed.error);
 
   const supabase = await createClient();
-  const { error } = id
-    ? await supabase.from("koinonia_eventos").update(parsed.data).eq("id", id)
-    : await supabase.from("koinonia_eventos").insert(parsed.data);
+  const { data: salvo, error } = id
+    ? await supabase.from("koinonia_eventos").update(parsed.data).eq("id", id).select("id").single()
+    : await supabase.from("koinonia_eventos").insert(parsed.data).select("id").single();
   if (error) return { ok: false, error: mensagemErroBanco(error) };
+
+  if (!id) {
+    const e = parsed.data;
+    await notificarCriacao(supabase, "evento_ao_cadastrar", {
+      titulo: `Novo evento: ${e.titulo}`,
+      mensagem: `${formatarDataHora(e.inicio)} · ${e.logradouro}, ${e.bairro}`,
+      url: `/app/eventos/${salvo.id}`,
+      origem: "evento",
+      publico: e.publico,
+      chave: `evento:${salvo.id}:novo`,
+    });
+  }
 
   updateTag(TAGS.eventos); // site público
   revalidatePath("/app/eventos");

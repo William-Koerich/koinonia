@@ -2,6 +2,7 @@ import { CakeIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, Ti
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AvisoCard } from "@/components/app/aviso-card";
+import { ConviteNotificacoes } from "@/components/app/notificacoes-push";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
+      <ConviteNotificacoes />
       <Avisos />
       <PedidosParaDecidir meuId={profile.id} />
       <InscricoesAConferir meuId={profile.id} />

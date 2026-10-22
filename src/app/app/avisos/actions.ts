@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { notificarCriacao } from "@/lib/notificacoes";
 import { STORAGE_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -36,10 +37,21 @@ export async function salvarAviso(id: string | null, input: AvisoInput): Promise
     imagemAntiga = data?.imagem_path ?? null;
   }
 
-  const { error } = id
-    ? await supabase.from("koinonia_avisos").update(parsed.data).eq("id", id)
-    : await supabase.from("koinonia_avisos").insert(parsed.data);
+  const { data: salvo, error } = id
+    ? await supabase.from("koinonia_avisos").update(parsed.data).eq("id", id).select("id").single()
+    : await supabase.from("koinonia_avisos").insert(parsed.data).select("id").single();
   if (error) return { ok: false, error: mensagemErroBanco(error) };
+
+  if (!id) {
+    await notificarCriacao(supabase, "aviso_ativo", {
+      titulo: parsed.data.titulo,
+      mensagem: parsed.data.mensagem,
+      url: "/app/avisos",
+      origem: "aviso",
+      publico: "todos",
+      chave: `aviso:${salvo.id}`,
+    });
+  }
 
   if (imagemAntiga !== parsed.data.imagem_path) await removerImagem(supabase, imagemAntiga);
 

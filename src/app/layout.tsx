@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.nome}`,
   },
   description: siteConfig.descricao,
+  // PWA: no iPhone, as notificações só funcionam com o app na tela de início
+  appleWebApp: { capable: true, title: "Koinonia", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
   openGraph: {
     type: "website",
     locale: "pt_BR",

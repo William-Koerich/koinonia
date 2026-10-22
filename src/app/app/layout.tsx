@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AppSidebar } from "@/components/app/app-sidebar";
+import { RegistrarServiceWorker } from "@/components/app/notificacoes-push";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+      <RegistrarServiceWorker />
       <AppSidebar nome={profile.nome_completo} role={profile.role} />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">

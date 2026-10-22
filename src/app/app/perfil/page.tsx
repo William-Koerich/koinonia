@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CartaoNotificacoes } from "@/components/app/notificacoes-push";
 import { PageHeader } from "@/components/app/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
@@ -33,6 +34,9 @@ export default async function MeuPerfilPage() {
           />
         </CardContent>
       </Card>
+      <div className="mt-6">
+        <CartaoNotificacoes />
+      </div>
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Senha</CardTitle>

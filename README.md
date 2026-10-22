@@ -91,6 +91,9 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Project Settings → API Keys (`sb_publishable_…`) | Pública, vai para o navegador |
 | `SUPABASE_SECRET_KEY` | Project Settings → API Keys (`sb_secret_…`) | **Só no servidor.** Ignora a RLS. Nunca prefixe com `NEXT_PUBLIC_` |
 | `NEXT_PUBLIC_SITE_URL` | URL do site | `http://localhost:3000` em dev; domínio em produção |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` | Chaves das notificações push. A privada é **só do servidor**. Trocar as chaves invalida os aparelhos já inscritos |
+| `VAPID_SUBJECT` | URL do site (ou `mailto:`) | Contato enviado aos serviços de push |
+| `CRON_SECRET` | um texto aleatório longo | Protege `/api/notificacoes/disparar`. O mesmo valor fica no Vault do Supabase (`koinonia_cron_secret`) |
 | `DATABASE_URL` | Project Settings → Database → Connection string (Session pooler) | Só para migrations, tipos e testes |
 
 > A chave secreta é usada apenas em `src/lib/supabase/admin.ts`, que importa `server-only` — o build falha se alguém tentar usá-la em um Client Component.
@@ -175,6 +178,8 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1500_avisos` | avisos da igreja (título, mensagem e imagem opcionais; público ou só membros; data de fim) |
 | `…1600_financeiro_entradas` | entradas do financeiro (dízimo, oferta, primícias, doação); acesso via `koinonia_pode_financeiro()` |
 | `…1700_financeiro_contas_a_pagar` | contas a pagar avulsas e recorrentes (semanal a anual, com fim por data ou nº de vezes) e geração automática |
+| `…1800_notificacoes_push` | notificações push: aparelhos inscritos, regras automáticas (escala, avisos, eventos), fila/histórico e funções de disparo |
+| `…1810_notificacoes_cron` | pg_cron chama o disparo a cada 5 min (segredo e URL no Vault: `koinonia_cron_secret`, `koinonia_site_url`) |
 
 ### Seed
 
@@ -244,6 +249,8 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Ver avisos | ✅ (inclusive encerrados) | ✅ (inclusive encerrados) | vigentes | vigentes |
 | Publicar avisos | ✅ | ✅ | ❌ | ❌ |
 | Financeiro (entradas e contas a pagar) | ✅ | ✅ | ❌ | ❌ |
+| Enviar notificações e definir as regras | ✅ | ✅ | ❌ | ❌ |
+| Receber notificações (ativar no aparelho) | ✅ | ✅ | ✅ | ✅ |
 | Conteúdo do site | ✅ | ✅ | ❌ | ❌ |
 
 Regras automáticas:
@@ -254,6 +261,7 @@ Regras automáticas:
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois. A equipe escalada (participantes do GC e membros do ministério), PASTOR e ADMIN montam o cardápio (preço e estoque opcionais) e veem as reservas com totais por item. Qualquer membro reserva: quantidade e se vai levar para casa ou comer na igreja. Reservas valem até o dia da cantina e respeitam o estoque.
 - **Avisos**: PASTOR e ADMIN publicam em **Avisos** (título obrigatório; mensagem e imagem opcionais). Aparecem no início da área logada e, se marcados como públicos, na home do site (o mais recente também em destaque na primeira tela). Com "Mostrar até" preenchido, o aviso some sozinho depois desse dia.
+- **PWA e notificações push**: o site é instalável (`src/app/manifest.ts`, ícones em `public/icons/`, service worker em `public/sw.js`). Cada pessoa ativa as notificações em **Meu perfil** (ou no convite do Início); no iPhone é preciso antes *Adicionar à Tela de Início* (iOS 16.4+). Em **Notificações**, ADMIN e PASTOR enviam mensagens na hora ou agendadas (todos, homens, mulheres, um ministério ou um GC) e veem o histórico; em **Regras automáticas** definem: lembrete diário de escala (a partir de N dias antes, num horário), notificação ao publicar aviso, ao cadastrar evento, lembretes de evento (15, 7 dias antes, no dia... num horário) e na hora em que o evento começa. O disparo: pg_cron → `POST /api/notificacoes/disparar` (a cada 5 min) → `koinonia_notificacoes_gerar_automaticas()` põe na fila o que venceu (a coluna `chave` impede repetição) → envio com `web-push`; aparelhos que desinstalaram (404/410) são removidos. Avisos, eventos novos e "enviar agora" saem na hora via `after()`.
 - **Financeiro — visão geral** (`/app/financeiro`): dashboard do mês escolhido com o saldo do mês (entradas − despesas pagas, regime de caixa), saldo do mês passado e do ano, variação contra o mês anterior, o que falta pagar e as vencidas; gráficos dos últimos 12 meses (entradas × despesas e saldo de cada mês, em SVG próprio, sem biblioteca), entradas e despesas por categoria, próximos vencimentos (15 dias) e os 12 meses em tabela. Cores dos gráficos nos tokens `--viz-*` de `globals.css` (validadas para daltonismo nos temas claro e escuro).
 - **Financeiro — entradas**: em **Financeiro → Entradas**, ADMIN e PASTOR lançam o que a igreja recebeu (dízimo, oferta, primícias, doação ou outra), com data, valor, forma de recebimento e, opcionalmente, quem contribuiu (membro com conta ou nome livre). A tela mostra o mês com total geral e por categoria (clicar numa categoria filtra a lista). Para dar acesso a outro papel no futuro (ex.: tesouraria), altere `koinonia_pode_financeiro()` no banco e `ROLES_FINANCEIRO` em `src/lib/permissions.ts`.
 - **Financeiro — contas a pagar**: em **Financeiro → Contas a pagar**, contas avulsas ou recorrentes (toda semana, a cada 15 dias, todo mês, a cada 2/3/6 meses ou todo ano), terminando nunca, numa data ou depois de N vezes (parcelas). As contas recorrentes são geradas pela função `koinonia_financeiro_gerar_contas(até)`, chamada ao abrir a tela (sempre até o mês seguinte ou o mês visto, no máximo 5 anos à frente); ela é idempotente graças ao `unique (recorrencia_id, ocorrencia)`. Cada conta pode ser editada, paga (data, valor pago e forma) ou cancelada isoladamente; conta recorrente é cancelada em vez de apagada, para não ser gerada de novo. Editar a recorrência muda as próximas contas em aberto; encerrar remove as que ainda iam vencer. A tela mostra total, a pagar, pago e as vencidas de todos os meses.
@@ -269,7 +277,7 @@ Helpers SQL (`security definer`): `koinonia_current_user_role()`, `koinonia_is_a
 ## Deploy na Vercel
 
 1. Importe o repositório na Vercel (framework detectado: Next.js).
-2. Em *Settings → Environment Variables*, cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` e `NEXT_PUBLIC_SITE_URL` (ex.: `https://www.suaigreja.com.br`). `DATABASE_URL` **não** é necessária no deploy.
+2. Em *Settings → Environment Variables*, cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SITE_URL` (ex.: `https://www.suaigreja.com.br`), `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` e `CRON_SECRET`. `DATABASE_URL` **não** é necessária no deploy.
 3. No Supabase, em *Authentication → URL Configuration → Redirect URLs*, adicione `https://www.suaigreja.com.br/**` (e `http://localhost:3000/**` para desenvolvimento). Sem isso o link de recuperação de senha não volta para o site.
    > O *Site URL* do projeto é compartilhado com os outros apps — não altere; use só as Redirect URLs.
 4. Aplique as migrations pendentes no banco **antes** de publicar uma versão que dependa delas.
