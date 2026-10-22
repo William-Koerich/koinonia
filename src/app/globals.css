@@ -72,6 +72,12 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* gráficos do financeiro (paleta validada p/ daltonismo contra o card branco) */
+  --viz-entrada: #2a78d6;
+  --viz-despesa: #eb6834;
+  --viz-negativo: #e34948;
+  --viz-grade: #e1e0d9;
+  --viz-eixo: #c3c2b7;
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -107,6 +113,12 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
+  /* mesmos tons, ajustados para o card escuro */
+  --viz-entrada: #3987e5;
+  --viz-despesa: #d95926;
+  --viz-negativo: #e66767;
+  --viz-grade: #2c2c2a;
+  --viz-eixo: #383835;
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);

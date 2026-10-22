@@ -100,6 +100,10 @@ function GrupoMenu({
 }) {
   const [aberto, setAberto] = useState(ativo);
   const expandido = aberto || ativo;
+  // subitem ativo = o de rota mais específica (senão "Visão geral" acenderia em todas)
+  const subAtivo = item.subitens
+    ?.filter((sub) => pathname === sub.href || pathname.startsWith(`${sub.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <SidebarMenuItem>
@@ -116,7 +120,7 @@ function GrupoMenu({
         <SidebarMenuSub>
           {item.subitens?.map((sub) => (
             <SidebarMenuSubItem key={sub.href}>
-              <SidebarMenuSubButton asChild isActive={pathname.startsWith(sub.href)}>
+              <SidebarMenuSubButton asChild isActive={sub.href === subAtivo}>
                 <Link href={sub.href} onClick={aoNavegar}>
                   <span>{sub.label}</span>
                 </Link>

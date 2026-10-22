@@ -40,6 +40,7 @@ export const menuItems: MenuItem[] = [
     icon: WalletIcon,
     roles: ROLES_FINANCEIRO,
     subitens: [
+      { href: "/app/financeiro", label: "Visão geral" },
       { href: "/app/financeiro/entradas", label: "Entradas" },
       { href: "/app/financeiro/contas-a-pagar", label: "Contas a pagar" },
     ],
