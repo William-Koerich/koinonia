@@ -180,6 +180,7 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1700_financeiro_contas_a_pagar` | contas a pagar avulsas e recorrentes (semanal a anual, com fim por data ou nº de vezes) e geração automática |
 | `…1800_notificacoes_push` | notificações push: aparelhos inscritos, regras automáticas (escala, avisos, eventos), fila/histórico e funções de disparo |
 | `…1810_notificacoes_cron` | pg_cron chama o disparo a cada 5 min (segredo e URL no Vault: `koinonia_cron_secret`, `koinonia_site_url`) |
+| `…1900_visitantes` | cadastro de visitantes (nome, celular, data da visita, motivo); acesso via `koinonia_pode_visitantes()` |
 
 ### Seed
 
@@ -250,6 +251,7 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Publicar avisos | ✅ | ✅ | ❌ | ❌ |
 | Financeiro (entradas e contas a pagar) | ✅ | ✅ | ❌ | ❌ |
 | Enviar notificações e definir as regras | ✅ | ✅ | ❌ | ❌ |
+| Visitantes | ✅ | ✅ | ❌ | ❌ |
 | Receber notificações (ativar no aparelho) | ✅ | ✅ | ✅ | ✅ |
 | Conteúdo do site | ✅ | ✅ | ❌ | ❌ |
 
@@ -261,6 +263,7 @@ Regras automáticas:
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois. A equipe escalada (participantes do GC e membros do ministério), PASTOR e ADMIN montam o cardápio (preço e estoque opcionais) e veem as reservas com totais por item. Qualquer membro reserva: quantidade e se vai levar para casa ou comer na igreja. Reservas valem até o dia da cantina e respeitam o estoque.
 - **Avisos**: PASTOR e ADMIN publicam em **Avisos** (título obrigatório; mensagem e imagem opcionais). Aparecem no início da área logada e, se marcados como públicos, na home do site (o mais recente também em destaque na primeira tela). Com "Mostrar até" preenchido, o aviso some sozinho depois desse dia.
+- **Visitantes**: em **Visitantes**, ADMIN e PASTOR cadastram quem visitou a igreja (nome, celular/WhatsApp, data da visita e motivo opcional), buscam por nome ou celular e chamam no WhatsApp com uma mensagem de boas-vindas pronta. Para liberar a uma equipe de recepção, altere `koinonia_pode_visitantes()` no banco e `ROLES_VISITANTES` em `src/lib/permissions.ts`.
 - **PWA e notificações push**: o site é instalável (`src/app/manifest.ts`, ícones em `public/icons/`, service worker em `public/sw.js`). Cada pessoa ativa as notificações em **Meu perfil** (ou no convite do Início); no iPhone é preciso antes *Adicionar à Tela de Início* (iOS 16.4+). Em **Notificações**, ADMIN e PASTOR enviam mensagens na hora ou agendadas (todos, homens, mulheres, um ministério ou um GC) e veem o histórico; em **Regras automáticas** definem: lembrete diário de escala (a partir de N dias antes, num horário), notificação ao publicar aviso, ao cadastrar evento, lembretes de evento (15, 7 dias antes, no dia... num horário) e na hora em que o evento começa. O disparo: pg_cron → `POST /api/notificacoes/disparar` (a cada 5 min) → `koinonia_notificacoes_gerar_automaticas()` põe na fila o que venceu (a coluna `chave` impede repetição) → envio com `web-push`; aparelhos que desinstalaram (404/410) são removidos. Avisos, eventos novos e "enviar agora" saem na hora via `after()`.
 - **Financeiro — visão geral** (`/app/financeiro`): dashboard do mês escolhido com o saldo do mês (entradas − despesas pagas, regime de caixa), saldo do mês passado e do ano, variação contra o mês anterior, o que falta pagar e as vencidas; gráficos dos últimos 12 meses (entradas × despesas e saldo de cada mês, em SVG próprio, sem biblioteca), entradas e despesas por categoria, próximos vencimentos (15 dias) e os 12 meses em tabela. Cores dos gráficos nos tokens `--viz-*` de `globals.css` (validadas para daltonismo nos temas claro e escuro).
 - **Financeiro — entradas**: em **Financeiro → Entradas**, ADMIN e PASTOR lançam o que a igreja recebeu (dízimo, oferta, primícias, doação ou outra), com data, valor, forma de recebimento e, opcionalmente, quem contribuiu (membro com conta ou nome livre). A tela mostra o mês com total geral e por categoria (clicar numa categoria filtra a lista). Para dar acesso a outro papel no futuro (ex.: tesouraria), altere `koinonia_pode_financeiro()` no banco e `ROLES_FINANCEIRO` em `src/lib/permissions.ts`.

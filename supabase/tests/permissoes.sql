@@ -479,6 +479,24 @@ select koinonia_teste_ok((select status::text from public.koinonia_notificacoes 
   'e não pega a mesma notificação duas vezes');
 
 \echo
+\echo '== Visitantes'
+set local role anon;
+select koinonia_teste_bloqueia($$select * from koinonia_visitantes$$, 'anon não lê visitantes');
+reset role;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$insert into koinonia_visitantes (nome, celular) values ('Visitante Intruso', '47999999999')$$, 'membro não cadastra visitante');
+select koinonia_teste_ok((select count(*) from koinonia_visitantes) = 0, 'membro não vê visitantes');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+with i as (insert into koinonia_visitantes (nome, celular, motivo) values ('Visitante Teste', '47999998888', 'Convidado por amigo') returning data_visita, created_by)
+select koinonia_teste_ok((select data_visita = (now() at time zone 'America/Sao_Paulo')::date and created_by = auth.uid() from i),
+  'pastor cadastra visitante (data de hoje e autor por padrão)');
+select koinonia_teste_bloqueia($$insert into koinonia_visitantes (nome, celular) values ('Sem DDD', '99998888')$$, 'celular precisa de DDD');
+reset role;
+
+\echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
 update public.koinonia_profiles set ativo = false where id = :'membro_id';

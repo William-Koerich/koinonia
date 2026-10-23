@@ -861,6 +861,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_visitantes": {
+                  Row: {
+                    "celular": string,"created_at": string,"created_by": string | null,"data_visita": string,"id": string,"motivo": string | null,"nome": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "celular": string,"created_at"?: string,"created_by"?: string | null,"data_visita"?: string,"id"?: string,"motivo"?: string | null,"nome": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "celular"?: string,"created_at"?: string,"created_by"?: string | null,"data_visita"?: string,"id"?: string,"motivo"?: string | null,"nome"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_visitantes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_visitantes_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"periferico_categorias": {
                   Row: {
                     "created_at": string,"id": string,"nome": string
@@ -1204,6 +1230,9 @@ isOneToOne: false
 { Args: { "p_ministerio_id": string }; Returns: boolean
                            },
 "koinonia_pode_financeiro":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"koinonia_pode_visitantes":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "koinonia_push_cancelar":

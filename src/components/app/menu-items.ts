@@ -9,11 +9,12 @@ import {
   MegaphoneIcon,
   UserIcon,
   UsersIcon,
+  UserRoundPlusIcon,
   UsersRoundIcon,
   WaypointsIcon,
   WalletIcon,
 } from "lucide-react";
-import { ROLES_FINANCEIRO } from "@/lib/permissions";
+import { ROLES_FINANCEIRO, ROLES_VISITANTES } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
 
 export type MenuItem = {
@@ -35,6 +36,7 @@ export const menuItems: MenuItem[] = [
   { href: "/app/cantina", label: "Cantina", icon: CoffeeIcon },
   { href: "/app/ministerios", label: "Ministérios", icon: WaypointsIcon },
   { href: "/app/gcs", label: "GCs", icon: UsersRoundIcon },
+  { href: "/app/visitantes", label: "Visitantes", icon: UserRoundPlusIcon, roles: ROLES_VISITANTES },
   {
     href: "/app/financeiro",
     label: "Financeiro",
