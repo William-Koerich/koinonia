@@ -389,14 +389,14 @@ isOneToOne: false
                   ]
                 },"koinonia_escala_funcoes": {
                   Row: {
-                    "ativo": boolean,"funcao": string,"id": string,"ordem": number,"vagas": number
+                    "ativo": boolean,"cadastra_visitantes": boolean,"funcao": string,"id": string,"ordem": number,"vagas": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "ativo"?: boolean,"funcao": string,"id"?: string,"ordem"?: number,"vagas": number
+                    "ativo"?: boolean,"cadastra_visitantes"?: boolean,"funcao": string,"id"?: string,"ordem"?: number,"vagas": number
                   }
                   Update: {
-                    "ativo"?: boolean,"funcao"?: string,"id"?: string,"ordem"?: number,"vagas"?: number
+                    "ativo"?: boolean,"cadastra_visitantes"?: boolean,"funcao"?: string,"id"?: string,"ordem"?: number,"vagas"?: number
                   }
                   Relationships: [
                     
@@ -1167,6 +1167,9 @@ isOneToOne: false
 "koinonia_financeiro_vencimento":
 { Args: { "p_frequencia": Database["public"]['Enums']["koinonia_recorrencia_frequencia"],"p_inicio": string,"p_n": number }; Returns: string
                            },
+"koinonia_hoje_sp":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "koinonia_informar_pagamento":
 { Args: { "p_evento_id": string }; Returns: undefined
                            },
@@ -1193,6 +1196,9 @@ isOneToOne: false
                            },
 "koinonia_is_responsavel_por_inscrito":
 { Args: { "p_profile_id": string }; Returns: boolean
+                           },
+"koinonia_na_porta_hoje":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "koinonia_notificacao_destinos":
 { Args: { "p_notificacao_id": string }; Returns: {

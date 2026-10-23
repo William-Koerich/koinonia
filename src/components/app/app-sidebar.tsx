@@ -25,10 +25,19 @@ import { ROLE_LABEL } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
 import { type MenuItem, menuItems } from "./menu-items";
 
-export function AppSidebar({ nome, role }: { nome: string; role: Role }) {
+export function AppSidebar({
+  nome,
+  role,
+  liberados = [],
+}: {
+  nome: string;
+  role: Role;
+  /** itens restritos liberados só hoje para esta pessoa (ex.: Visitantes p/ a Porta Principal) */
+  liberados?: string[];
+}) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  const itens = menuItems.filter((item) => !item.roles || item.roles.includes(role));
+  const itens = menuItems.filter((item) => !item.roles || item.roles.includes(role) || liberados.includes(item.href));
 
   return (
     <Sidebar>

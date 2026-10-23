@@ -496,6 +496,35 @@ select koinonia_teste_ok((select data_visita = (now() at time zone 'America/Sao_
 select koinonia_teste_bloqueia($$insert into koinonia_visitantes (nome, celular) values ('Sem DDD', '99998888')$$, 'celular precisa de DDD');
 reset role;
 
+-- MEMBRO escalado HOJE na Porta Principal
+select set_config('request.jwt.claims', '', true);
+insert into public.koinonia_escalas (id, data, descricao) values
+  ('99999999-0000-4000-a000-0000000000f9', (now() at time zone 'America/Sao_Paulo')::date, 'Culto Porta Teste');
+insert into public.koinonia_escala_atribuicoes (escala_id, funcao_id, profile_id)
+select '99999999-0000-4000-a000-0000000000f9', id, :'membro_id' from public.koinonia_escala_funcoes where cadastra_visitantes limit 1;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok(koinonia_na_porta_hoje(), 'escalado hoje na Porta Principal tem acesso');
+with i as (insert into koinonia_visitantes (nome, celular) values ('Visitante da Porta', '47988887777') returning 1)
+select koinonia_teste_ok(count(*) = 1, 'porta cadastra visitante no dia') from i;
+select koinonia_teste_bloqueia($$insert into koinonia_visitantes (nome, celular, data_visita) values ('Ontem', '47988887777', current_date - 1)$$,
+  'porta não cadastra visita de outro dia');
+select koinonia_teste_ok((select count(*) from koinonia_visitantes where nome in ('Visitante Teste', 'Visitante da Porta')) = 2,
+  'porta vê os visitantes de hoje (inclusive os cadastrados por outros)');
+with u as (update koinonia_visitantes set motivo = 'Editado pela porta' where nome = 'Visitante Teste' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'porta não edita visitante cadastrado por outra pessoa') from u;
+with u as (update koinonia_visitantes set motivo = 'Primeira vez' where nome = 'Visitante da Porta' returning 1)
+select koinonia_teste_ok(count(*) = 1, 'porta corrige o que ela mesma cadastrou') from u;
+reset role;
+-- a mesma escala, mas amanhã: sem acesso hoje
+select set_config('request.jwt.claims', '', true);
+update public.koinonia_escalas set data = data + 1 where id = '99999999-0000-4000-a000-0000000000f9';
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok(not koinonia_na_porta_hoje() and (select count(*) from koinonia_visitantes) = 0,
+  'fora do dia da escala, a porta não vê nem cadastra visitantes');
+reset role;
+
 \echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema

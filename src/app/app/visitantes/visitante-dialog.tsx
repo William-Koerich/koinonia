@@ -22,7 +22,16 @@ import { formatarCelular } from "@/lib/format";
 import { visitanteSchema, visitanteVazio, type VisitanteInput } from "@/lib/validation/visitante";
 import { salvarVisitante } from "./actions";
 
-export function VisitanteDialog({ hoje, visitante }: { hoje: string; visitante?: { id: string; valores: VisitanteInput } }) {
+export function VisitanteDialog({
+  hoje,
+  visitante,
+  dataFixa = false,
+}: {
+  hoje: string;
+  visitante?: { id: string; valores: VisitanteInput };
+  /** equipe da porta: a visita é sempre de hoje */
+  dataFixa?: boolean;
+}) {
   const [aberto, setAberto] = useState(false);
   const valoresIniciais = visitante?.valores ?? visitanteVazio(hoje);
 
@@ -65,7 +74,7 @@ export function VisitanteDialog({ hoje, visitante }: { hoje: string; visitante?:
               <Input id="nome" autoComplete="off" aria-invalid={!!errors.nome} {...form.register("nome")} />
               <FieldError errors={[errors.nome]} />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={dataFixa ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
               <Field data-invalid={!!errors.celular}>
                 <FieldLabel htmlFor="celular">Celular / WhatsApp</FieldLabel>
                 <Controller
@@ -86,11 +95,13 @@ export function VisitanteDialog({ hoje, visitante }: { hoje: string; visitante?:
                 />
                 <FieldError errors={[errors.celular]} />
               </Field>
-              <Field data-invalid={!!errors.data_visita}>
-                <FieldLabel htmlFor="data_visita">Data da visita</FieldLabel>
-                <Input id="data_visita" type="date" aria-invalid={!!errors.data_visita} {...form.register("data_visita")} />
-                <FieldError errors={[errors.data_visita]} />
-              </Field>
+              {!dataFixa && (
+                <Field data-invalid={!!errors.data_visita}>
+                  <FieldLabel htmlFor="data_visita">Data da visita</FieldLabel>
+                  <Input id="data_visita" type="date" aria-invalid={!!errors.data_visita} {...form.register("data_visita")} />
+                  <FieldError errors={[errors.data_visita]} />
+                </Field>
+              )}
             </div>
             <Field data-invalid={!!errors.motivo}>
               <FieldLabel htmlFor="motivo">Motivo da visita</FieldLabel>

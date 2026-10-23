@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireProfile } from "@/lib/auth";
+import { acessoVisitantes } from "@/lib/visitantes";
 
 export const metadata: Metadata = {
   title: { default: "Minha área", template: "%s | Minha área" },
@@ -23,11 +24,13 @@ export default function AppLayout({ children }: LayoutProps<"/app">) {
 
 async function AppShell({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
+  // o menu de Visitantes abre para quem está na Porta Principal no dia
+  const liberados = (await acessoVisitantes(profile)) === "porta" ? ["/app/visitantes"] : [];
 
   return (
     <SidebarProvider>
       <RegistrarServiceWorker />
-      <AppSidebar nome={profile.nome_completo} role={profile.role} />
+      <AppSidebar nome={profile.nome_completo} role={profile.role} liberados={liberados} />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />

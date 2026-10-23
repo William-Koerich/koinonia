@@ -1,4 +1,4 @@
-import { CakeIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
+import { CakeIcon, DoorOpenIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AvisoCard } from "@/components/app/aviso-card";
@@ -12,6 +12,7 @@ import { formatarDataLonga, formatarHora, formatarValorEvento, hojeISO } from "@
 import { isAdminOrPastor } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
+import { acessoVisitantes } from "@/lib/visitantes";
 
 export const metadata: Metadata = { title: "Início" };
 
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
       )}
 
       <ConviteNotificacoes />
+      <PortaPrincipalHoje profile={profile} />
       <Avisos />
       <PedidosParaDecidir meuId={profile.id} />
       <InscricoesAConferir meuId={profile.id} />
@@ -48,6 +50,25 @@ export default async function DashboardPage() {
         {gerencia && <Aniversariantes />}
       </div>
     </>
+  );
+}
+
+/** Quem está na Porta Principal hoje vê o atalho para cadastrar os visitantes */
+async function PortaPrincipalHoje({ profile }: { profile: Profile }) {
+  if ((await acessoVisitantes(profile)) !== "porta") return null;
+  return (
+    <Card className="mb-6 border-primary/30 bg-primary/5">
+      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <DoorOpenIcon className="size-5 shrink-0 text-primary" />
+        <div className="flex-1 text-sm">
+          <p className="font-medium">Você está na Porta Principal hoje</p>
+          <p className="text-muted-foreground">Cadastre quem estiver visitando a igreja, para a gente fazer contato depois.</p>
+        </div>
+        <Button asChild size="sm">
+          <Link href="/app/visitantes">Cadastrar visitantes</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

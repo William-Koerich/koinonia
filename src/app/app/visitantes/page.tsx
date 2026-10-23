@@ -7,10 +7,11 @@ import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { requireRole } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireProfile } from "@/lib/auth";
 import { formatarCelular, formatarData, hojeISO } from "@/lib/format";
-import { ROLES_VISITANTES } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { acessoVisitantes } from "@/lib/visitantes";
 import { excluirVisitante } from "./actions";
 import { Busca } from "./busca";
 import { VisitanteDialog } from "./visitante-dialog";
@@ -18,8 +19,6 @@ import { VisitanteDialog } from "./visitante-dialog";
 export const metadata: Metadata = { title: "Visitantes" };
 
 export default async function VisitantesPage({ searchParams }: PageProps<"/app/visitantes">) {
-  await requireRole(...ROLES_VISITANTES);
-
   return (
     <Suspense fallback={<Skeleton className="h-64" />}>
       <Lista searchParams={searchParams} />
@@ -34,6 +33,10 @@ function linkWhatsApp(celular: string, nome: string) {
 }
 
 async function Lista({ searchParams }: Pick<PageProps<"/app/visitantes">, "searchParams">) {
+  const profile = await requireProfile();
+  const acesso = await acessoVisitantes(profile);
+  if (!acesso) redirect("/app");
+  const porta = acesso === "porta";
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.replace(/[,()%*\\]/g, " ").trim() : "";
   const hoje = hojeISO();
@@ -41,7 +44,7 @@ async function Lista({ searchParams }: Pick<PageProps<"/app/visitantes">, "searc
   const supabase = await createClient();
   let query = supabase
     .from("koinonia_visitantes")
-    .select("id, nome, celular, data_visita, motivo")
+    .select("id, nome, celular, data_visita, motivo, created_by")
     .order("data_visita", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(300);
@@ -53,22 +56,26 @@ async function Lista({ searchParams }: Pick<PageProps<"/app/visitantes">, "searc
   if (error) throw new Error(error.message);
 
   const doMes = visitantes.filter((v) => v.data_visita.slice(0, 7) === hoje.slice(0, 7)).length;
+  // a equipe da porta (a RLS já mostra só os de hoje) edita só o que ela mesma cadastrou
+  const podeEditar = (v: { created_by: string | null }) => !porta || v.created_by === profile.id;
+  const descricao = porta
+    ? `Você está na Porta Principal hoje. ${visitantes.length} ${visitantes.length === 1 ? "visitante cadastrado" : "visitantes cadastrados"} hoje.`
+    : q
+      ? `${visitantes.length} encontrado(s)`
+      : `${doMes} ${doMes === 1 ? "visitante" : "visitantes"} neste mês`;
 
   return (
     <>
-      <PageHeader
-        titulo="Visitantes"
-        descricao={q ? `${visitantes.length} encontrado(s)` : `${doMes} ${doMes === 1 ? "visitante" : "visitantes"} neste mês`}
-      >
-        <VisitanteDialog hoje={hoje} />
+      <PageHeader titulo={porta ? "Visitantes de hoje" : "Visitantes"} descricao={descricao}>
+        <VisitanteDialog hoje={hoje} dataFixa={porta} />
       </PageHeader>
 
-      <Busca />
+      {!porta && <Busca />}
 
       {visitantes.length === 0 ? (
         <EmptyState
           icone={UserRoundSearchIcon}
-          titulo={q ? "Ninguém encontrado" : "Nenhum visitante cadastrado"}
+          titulo={q ? "Ninguém encontrado" : porta ? "Nenhum visitante cadastrado hoje" : "Nenhum visitante cadastrado"}
           descricao={q ? undefined : "Cadastre quem visitou a igreja para não perder o contato."}
         />
       ) : (
@@ -98,19 +105,24 @@ async function Lista({ searchParams }: Pick<PageProps<"/app/visitantes">, "searc
                           <MessageCircleIcon />
                         </a>
                       </Button>
-                      <VisitanteDialog
-                        hoje={hoje}
-                        visitante={{
-                          id: v.id,
-                          valores: { nome: v.nome, celular: v.celular, data_visita: v.data_visita, motivo: v.motivo ?? "" },
-                        }}
-                      />
-                      <ConfirmarExclusao
-                        somenteIcone
-                        titulo={`Excluir ${v.nome}?`}
-                        descricao="O cadastro do visitante será apagado."
-                        acao={excluirVisitante.bind(null, v.id)}
-                      />
+                      {podeEditar(v) && (
+                        <>
+                          <VisitanteDialog
+                            hoje={hoje}
+                            dataFixa={porta}
+                            visitante={{
+                              id: v.id,
+                              valores: { nome: v.nome, celular: v.celular, data_visita: v.data_visita, motivo: v.motivo ?? "" },
+                            }}
+                          />
+                          <ConfirmarExclusao
+                            somenteIcone
+                            titulo={`Excluir ${v.nome}?`}
+                            descricao="O cadastro do visitante será apagado."
+                            acao={excluirVisitante.bind(null, v.id)}
+                          />
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
