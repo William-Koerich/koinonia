@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { STORAGE_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -52,6 +53,7 @@ export async function salvarPastor(id: string | null, input: PastorInput): Promi
 
   updateTag(TAGS.pastores);
   revalidatePath("/app/conteudo/pastores");
+  await flash(id ? "Pastor atualizado." : "Pastor adicionado ao site.");
   redirect("/app/conteudo/pastores");
 }
 
@@ -108,6 +110,7 @@ export async function salvarProjeto(id: string | null, input: ProjetoInput): Pro
 
   updateTag(TAGS.projetos);
   revalidatePath("/app/conteudo/projetos");
+  await flash(id ? "Projeto atualizado." : "Projeto criado.");
   redirect("/app/conteudo/projetos");
 }
 

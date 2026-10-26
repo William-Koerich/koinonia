@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { formatarDataHora } from "@/lib/format";
 import { notificarCriacao } from "@/lib/notificacoes";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +38,7 @@ export async function salvarEvento(id: string | null, input: EventoInput): Promi
 
   updateTag(TAGS.eventos); // site público
   revalidatePath("/app/eventos");
+  await flash(id ? "Evento atualizado." : "Evento criado.");
   redirect("/app/eventos");
 }
 

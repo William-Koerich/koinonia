@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getUserId } from "@/lib/auth";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
 import { gcSchema, type GcInput } from "@/lib/validation/gc";
@@ -27,6 +28,7 @@ export async function salvarGc(id: string | null, input: GcInput): Promise<Actio
   }
 
   revalidatePath("/app/gcs");
+  await flash(id ? "GC atualizado." : "GC criado.");
   redirect("/app/gcs");
 }
 

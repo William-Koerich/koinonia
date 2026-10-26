@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
 import { escalaSchema, type EscalaInput } from "@/lib/validation/escala";
@@ -37,6 +38,7 @@ export async function excluirEscala(id: string): Promise<ActionResult> {
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
   revalidatePath("/app/escala");
+  await flash("Escala excluída.");
   redirect("/app/escala");
 }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { erroValidacao, mensagemErroAuth, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -110,5 +111,6 @@ export async function atualizarUsuario(id: string, input: UsuarioEdicaoInput): P
 
   revalidatePath("/app/usuarios");
   revalidatePath("/app", "layout");
+  await flash("Usuário atualizado.");
   redirect("/app/usuarios");
 }

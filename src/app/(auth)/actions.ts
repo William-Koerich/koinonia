@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { siteConfig } from "@/config/site";
 import { getUserId } from "@/lib/auth";
 import { erroValidacao, mensagemErroAuth, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -95,6 +96,7 @@ export async function completarCadastro(input: PerfilInput): Promise<ActionResul
     .insert({ id: userId, email: "", ...parsed.data });
   if (error && error.code !== "23505") return { ok: false, error: mensagemErroBanco(error) };
 
+  await flash("Cadastro concluído. Seja bem-vindo(a)!");
   redirect("/app");
 }
 
@@ -129,6 +131,7 @@ export async function redefinirSenha(input: RedefinirSenhaInput): Promise<Action
   const { error } = await supabase.auth.updateUser({ password: parsed.data.senha });
   if (error) return { ok: false, error: mensagemErroAuth(error) };
 
+  await flash("Senha alterada.");
   redirect("/app");
 }
 

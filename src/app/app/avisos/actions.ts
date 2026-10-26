@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
+import { flash } from "@/lib/flash";
 import { notificarCriacao } from "@/lib/notificacoes";
 import { STORAGE_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -56,6 +57,7 @@ export async function salvarAviso(id: string | null, input: AvisoInput): Promise
   if (imagemAntiga !== parsed.data.imagem_path) await removerImagem(supabase, imagemAntiga);
 
   revalidar();
+  await flash(id ? "Aviso atualizado." : "Aviso publicado.");
   redirect("/app/avisos");
 }
 
