@@ -27,6 +27,7 @@ export function PessoaCombobox({
   invalido,
   desabilitarIds,
   avisos,
+  alertas,
 }: {
   id?: string;
   pessoas: PessoaOpcao[];
@@ -39,6 +40,8 @@ export function PessoaCombobox({
   desabilitarIds?: Set<string>;
   /** Aviso exibido abaixo do nome (ex.: "já escalado: Culto 10h") */
   avisos?: Map<string, string>;
+  /** Alerta mais forte, em vermelho (ex.: "marcou que não pode neste dia") */
+  alertas?: Map<string, string>;
 }) {
   const [aberto, setAberto] = useState(false);
   const selecionada = pessoas.find((p) => p.id === value);
@@ -82,6 +85,7 @@ export function PessoaCombobox({
                     <CheckIcon className={cn(value === pessoa.id ? "opacity-100" : "opacity-0")} />
                     <div className="min-w-0">
                       <p>{pessoa.nome_completo}</p>
+                      {alertas?.has(pessoa.id) && <p className="text-xs text-destructive">{alertas.get(pessoa.id)}</p>}
                       {avisos?.has(pessoa.id) && (
                         <p className="text-xs text-amber-600 dark:text-amber-400">{avisos.get(pessoa.id)}</p>
                       )}

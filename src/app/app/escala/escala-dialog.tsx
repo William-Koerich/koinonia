@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatarData } from "@/lib/format";
-import { escalaSchema, type EscalaInput } from "@/lib/validation/escala";
+import { ESCALA_VAZIA, escalaSchema, type EscalaInput } from "@/lib/validation/escala";
 import { salvarEscala } from "./actions";
 
 const SEM_EVENTO = "nenhum";
@@ -40,7 +42,7 @@ export function EscalaDialog({
   eventos: EventoOpcao[];
 }) {
   const [aberto, setAberto] = useState(false);
-  const valoresIniciais: EscalaInput = escala?.valores ?? { data: "", descricao: "", evento_id: null };
+  const valoresIniciais: EscalaInput = escala?.valores ?? ESCALA_VAZIA;
 
   const { form, pending, onSubmit } = useActionForm({
     schema: escalaSchema,
@@ -69,7 +71,7 @@ export function EscalaDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <form onSubmit={onSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>{escala ? "Editar escala" : "Nova escala"}</DialogTitle>
@@ -118,6 +120,39 @@ export function EscalaDialog({
                 )}
               />
               <FieldDescription>Opcional: vincule a um evento especial.</FieldDescription>
+            </Field>
+
+            <Separator />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Ensaio</p>
+              <p className="text-sm text-muted-foreground">Opcional. Aparece para todos os escalados.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field data-invalid={!!errors.ensaio_em}>
+                <FieldLabel htmlFor="ensaio_em">Data e hora</FieldLabel>
+                <Input
+                  id="ensaio_em"
+                  type="datetime-local"
+                  aria-invalid={!!errors.ensaio_em}
+                  {...form.register("ensaio_em")}
+                />
+                <FieldError errors={[errors.ensaio_em]} />
+              </Field>
+              <Field data-invalid={!!errors.ensaio_local}>
+                <FieldLabel htmlFor="ensaio_local">Local</FieldLabel>
+                <Input id="ensaio_local" placeholder="Ex.: Templo" {...form.register("ensaio_local")} />
+                <FieldError errors={[errors.ensaio_local]} />
+              </Field>
+            </div>
+            <Field data-invalid={!!errors.repertorio}>
+              <FieldLabel htmlFor="repertorio">Repertório</FieldLabel>
+              <Textarea
+                id="repertorio"
+                rows={5}
+                placeholder={"Uma música por linha. Pode colar o link (YouTube, cifra):\nBondade de Deus – https://youtu.be/...\nGrande é o Senhor (tom G)"}
+                {...form.register("repertorio")}
+              />
+              <FieldError errors={[errors.repertorio]} />
             </Field>
           </FieldGroup>
           <DialogFooter>

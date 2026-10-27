@@ -182,6 +182,7 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…1810_notificacoes_cron` | pg_cron chama o disparo a cada 5 min (segredo e URL no Vault: `koinonia_cron_secret`, `koinonia_site_url`) |
 | `…1900_visitantes` | cadastro de visitantes (nome, celular, data da visita, motivo); acesso via `koinonia_pode_visitantes()` |
 | `…1910_visitantes_porta_principal` | quem está escalado hoje numa função com `cadastra_visitantes` (Porta Principal) cadastra e vê os visitantes do dia |
+| `…2000_escala_confirmacao_trocas` | escala: confirmação/recusa de cada escalado, indisponibilidades, pedidos de troca (substituto aceita, liderança aprova), ensaio e repertório; lembrete diário pula quem recusou |
 
 ### Seed
 
@@ -246,6 +247,8 @@ As permissões são garantidas por **RLS e triggers no banco**. A interface só 
 | Marcar líder de ministério | ✅ | ✅ | ❌ | ❌ |
 | CRUD GCs / colocar pessoas em GCs | ✅ | ✅ | ver e escolher o seu | ver e escolher o seu |
 | Escala e Cantina | ✅ | ✅ | ver | ver (destaca onde está escalado) |
+| Confirmar/recusar a própria escala, marcar indisponibilidade, pedir troca | ✅ | ✅ | ✅ | ✅ |
+| Aprovar trocas, ver respostas e indisponibilidades de todos | ✅ | ✅ | ❌ | ❌ |
 | Cardápio da cantina | ✅ | ✅ | se a equipe dele estiver escalada na data | se o GC/ministério dele estiver escalado |
 | Reservar na cantina | ✅ | ✅ | ✅ | ✅ |
 | Ver avisos | ✅ (inclusive encerrados) | ✅ (inclusive encerrados) | vigentes | vigentes |
@@ -263,6 +266,10 @@ Regras automáticas:
 - Ninguém altera o próprio papel nem desativa a si mesmo.
 - **Usuário inativo** não entra em `/app`, não pode ser escalado e não lê dados da área logada.
 - **Escala**: a mesma pessoa não pode ter duas funções na mesma escala, e o número de vagas da função não pode ser excedido. Estar em duas escalas no mesmo dia é permitido, com aviso.
+  - **Confirmação**: quem é escalado começa como *aguardando* e confirma ou recusa (com motivo) pelo app: em **Escala → Suas próximas escalas**, na página da escala ou no Início. A recusa avisa ADMIN/PASTOR por push. Na página da escala a liderança vê confirmados, sem resposta e quem não pode (com o motivo) e tem o botão *Lembrar quem não respondeu* (um push por pessoa por dia). Trocar a pessoa de uma vaga volta a resposta para *aguardando*.
+  - **Indisponibilidade**: em **Escala → Minha disponibilidade** o membro marca um dia ou um período (até 120 dias) em que não pode servir. Ao escolher pessoas para uma vaga, quem está indisponível aparece em vermelho no seletor, e escalar mesmo assim mostra um alerta. ADMIN/PASTOR veem as indisponibilidades da equipe na mesma tela.
+  - **Trocas**: quem está escalado escolhe um substituto entre os que já serviram naquela função (e não estão na escala nem indisponíveis). O substituto aceita ou recusa, e depois ADMIN/PASTOR aprovam: só então a vaga muda de dono, já confirmada. Cada etapa notifica os envolvidos. Tudo passa por funções `koinonia_escala_troca_*` (security definer); o membro não altera as tabelas diretamente.
+  - **Ensaio**: a escala pode ter data/hora e local do ensaio e o repertório (uma música por linha, com link opcional), visíveis para todos.
 - **Cantina**: uma escala por data, com GC, ministério ou os dois. A equipe escalada (participantes do GC e membros do ministério), PASTOR e ADMIN montam o cardápio (preço e estoque opcionais) e veem as reservas com totais por item. Qualquer membro reserva: quantidade e se vai levar para casa ou comer na igreja. Reservas valem até o dia da cantina e respeitam o estoque.
 - **Avisos**: PASTOR e ADMIN publicam em **Avisos** (título obrigatório; mensagem e imagem opcionais). Aparecem no início da área logada e, se marcados como públicos, na home do site (o mais recente também em destaque na primeira tela). Com "Mostrar até" preenchido, o aviso some sozinho depois desse dia.
 - **Visitantes**: em **Visitantes**, ADMIN e PASTOR (e, só no dia, quem está escalado na **Porta Principal**) cadastram quem visitou a igreja (nome, celular/WhatsApp, data da visita e motivo opcional), buscam por nome ou celular e chamam no WhatsApp com uma mensagem de boas-vindas pronta. A equipe da porta só vê os visitantes do dia (para não repetir cadastro) e só corrige os que ela mesma cadastrou; o menu e um atalho no Início aparecem para ela apenas no dia da escala. Que função libera isso é a coluna `koinonia_escala_funcoes.cadastra_visitantes` (marcada na Porta Principal). Para dar acesso total a outros papéis, altere `koinonia_pode_visitantes()` no banco e `ROLES_VISITANTES` em `src/lib/permissions.ts`.

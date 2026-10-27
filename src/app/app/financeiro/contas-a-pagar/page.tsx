@@ -18,7 +18,7 @@ import { fimDoMes, mesValido, rotuloDespesa, rotuloForma, rotuloFrequencia, soma
 import { MesNavegacao } from "../_componentes/mes-navegacao";
 import { TotalCard } from "../_componentes/total-card";
 import { desfazerPagamento, excluirConta, reativarConta } from "./actions";
-import { BotaoAcao } from "./botao-acao";
+import { BotaoAcao } from "@/components/app/botao-acao";
 import { ContaDialog } from "./conta-dialog";
 import { PagarDialog } from "./pagar-dialog";
 

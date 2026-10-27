@@ -7,11 +7,20 @@ import { PessoaCombobox, type PessoaOpcao } from "@/components/forms/pessoa-comb
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Enums } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { atribuir, removerAtribuicao } from "../actions";
+import { StatusResposta } from "../_componentes/status-resposta";
 
 export type Funcao = { id: string; funcao: string; vagas: number };
-export type Atribuicao = { id: string; funcao_id: string; profile_id: string; nome: string | null };
+export type Atribuicao = {
+  id: string;
+  funcao_id: string;
+  profile_id: string;
+  nome: string | null;
+  resposta: Enums<"koinonia_escala_resposta">;
+  motivo: string | null;
+};
 
 export function EscalaGrade({
   escalaId,
@@ -19,6 +28,7 @@ export function EscalaGrade({
   atribuicoes,
   pessoas,
   avisos,
+  alertas,
   gerencia,
   meuId,
 }: {
@@ -28,11 +38,14 @@ export function EscalaGrade({
   pessoas: PessoaOpcao[];
   /** profile_id → "já escalado: ..." em outras escalas do mesmo dia */
   avisos: Record<string, string>;
+  /** profile_id → "não pode neste dia" (indisponibilidade marcada pela pessoa) */
+  alertas: Record<string, string>;
   gerencia: boolean;
   meuId: string;
 }) {
   const jaNestaEscala = new Set(atribuicoes.map((a) => a.profile_id));
   const mapaAvisos = new Map(Object.entries(avisos));
+  const mapaAlertas = new Map(Object.entries(alertas));
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -64,6 +77,7 @@ export function EscalaGrade({
                     pessoas={pessoas}
                     jaNestaEscala={jaNestaEscala}
                     avisos={mapaAvisos}
+                    alertas={mapaAlertas}
                   />
                 ) : (
                   <p key={i} className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
@@ -100,29 +114,38 @@ function Ocupante({
     });
   }
 
+  const recusou = atribuicao.resposta === "recusado";
+
   return (
     <div
       className={cn(
         "flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2 text-sm",
-        souEu && "bg-primary text-primary-foreground",
+        souEu && "bg-primary/10 ring-1 ring-primary/30",
+        recusou && "bg-destructive/5",
       )}
     >
-      <span className="truncate font-medium">
-        {atribuicao.nome ?? "Usuário inativo"}
-        {souEu && " (você)"}
-      </span>
-      {gerencia && (
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={remover}
-          disabled={pending}
-          aria-label={`Remover ${atribuicao.nome ?? "pessoa"}`}
-          className={cn(souEu && "hover:bg-primary-foreground/20 hover:text-primary-foreground")}
-        >
-          {pending ? <Loader2Icon className="animate-spin" /> : <XIcon />}
-        </Button>
-      )}
+      <div className="min-w-0">
+        <p className={cn("truncate font-medium", recusou && "text-muted-foreground line-through")}>
+          {atribuicao.nome ?? "Usuário inativo"}
+          {souEu && " (você)"}
+        </p>
+        {/* o motivo da recusa é visto só pela liderança */}
+        {gerencia && atribuicao.motivo && <p className="text-xs text-muted-foreground">“{atribuicao.motivo}”</p>}
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <StatusResposta resposta={atribuicao.resposta} className="bg-background" />
+        {gerencia && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={remover}
+            disabled={pending}
+            aria-label={`Remover ${atribuicao.nome ?? "pessoa"}`}
+          >
+            {pending ? <Loader2Icon className="animate-spin" /> : <XIcon />}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -133,12 +156,14 @@ function VagaLivre({
   pessoas,
   jaNestaEscala,
   avisos,
+  alertas,
 }: {
   escalaId: string;
   funcaoId: string;
   pessoas: PessoaOpcao[];
   jaNestaEscala: Set<string>;
   avisos: Map<string, string>;
+  alertas: Map<string, string>;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -168,6 +193,7 @@ function VagaLivre({
       placeholder="Escolher pessoa"
       desabilitarIds={jaNestaEscala}
       avisos={avisos}
+      alertas={alertas}
     />
   );
 }

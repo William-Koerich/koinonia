@@ -1,18 +1,21 @@
-import { CakeIcon, DoorOpenIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftRightIcon, CakeIcon, CheckIcon, DoorOpenIcon, CalendarDaysIcon, ClipboardListIcon, CoffeeIcon, HandIcon, TicketIcon, TriangleAlertIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AvisoCard } from "@/components/app/aviso-card";
+import { BotaoAcao } from "@/components/app/botao-acao";
 import { ConviteNotificacoes } from "@/components/app/notificacoes-push";
 import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireProfile } from "@/lib/auth";
-import { formatarDataLonga, formatarHora, formatarValorEvento, hojeISO } from "@/lib/format";
+import { formatarDataHora, formatarDataLonga, formatarHora, formatarValorEvento, hojeISO } from "@/lib/format";
 import { isAdminOrPastor } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { acessoVisitantes } from "@/lib/visitantes";
+import { responderEscala } from "./escala/actions";
+import { StatusResposta } from "./escala/_componentes/status-resposta";
 
 export const metadata: Metadata = { title: "Início" };
 
@@ -260,10 +263,10 @@ async function MinhasEscalas({ profile }: { profile: Profile }) {
     ministeriosIds.length ? `ministerio_id.in.(${ministeriosIds.join(",")})` : null,
   ].filter(Boolean);
 
-  const [{ data: servico }, { data: cantina }] = await Promise.all([
+  const [{ data: servico }, { data: cantina }, { count: trocasParaMim }] = await Promise.all([
     supabase
       .from("koinonia_escala_atribuicoes")
-      .select("id, funcao:koinonia_escala_funcoes(funcao), escala:koinonia_escalas!inner(id, data, descricao)")
+      .select("id, resposta, funcao:koinonia_escala_funcoes(funcao), escala:koinonia_escalas!inner(id, data, descricao, ensaio_em)")
       .eq("profile_id", profile.id)
       .gte("escala.data", hoje),
     filtrosCantina.length
@@ -275,6 +278,11 @@ async function MinhasEscalas({ profile }: { profile: Profile }) {
           .order("data")
           .limit(5)
       : Promise.resolve({ data: [] }),
+    supabase
+      .from("koinonia_escala_trocas")
+      .select("id", { count: "exact", head: true })
+      .eq("substituto_id", profile.id)
+      .eq("status", "aguardando_substituto"),
   ]);
 
   const proximoServico = [...(servico ?? [])].sort((a, b) => a.escala.data.localeCompare(b.escala.data)).slice(0, 5);
@@ -288,24 +296,49 @@ async function MinhasEscalas({ profile }: { profile: Profile }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        {!!trocasParaMim && (
+          <Link
+            href="/app/escala"
+            className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm hover:bg-primary/10"
+          >
+            <ArrowLeftRightIcon className="size-4 text-primary" />
+            {trocasParaMim === 1
+              ? "Alguém pediu para você assumir uma escala"
+              : `${trocasParaMim} pedidos para você assumir escalas`}
+          </Link>
+        )}
         {vazio && <p className="text-sm text-muted-foreground">Você não está em nenhuma escala nos próximos dias.</p>}
 
         {proximoServico.length > 0 && (
           <ul className="space-y-2">
             {proximoServico.map((a) => (
-              <li key={a.id}>
+              <li key={a.id} className="rounded-lg border">
                 <Link
                   href={`/app/escala/${a.escala.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 hover:bg-muted"
+                  className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-muted"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">{a.escala.descricao}</p>
                     <p className="text-xs text-muted-foreground first-letter:uppercase">
                       {formatarDataLonga(a.escala.data)}
                     </p>
+                    {a.escala.ensaio_em && (
+                      <p className="text-xs text-muted-foreground">Ensaio: {formatarDataHora(a.escala.ensaio_em)}</p>
+                    )}
                   </div>
-                  <Badge>{a.funcao?.funcao}</Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge>{a.funcao?.funcao}</Badge>
+                    {a.resposta !== "pendente" && <StatusResposta resposta={a.resposta} />}
+                  </div>
                 </Link>
+                {a.resposta === "pendente" && (
+                  <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                    <p className="text-xs text-muted-foreground">Vai poder servir?</p>
+                    <BotaoAcao acao={responderEscala.bind(null, a.id, true, "")} variant="default" size="xs">
+                      <CheckIcon /> Confirmar
+                    </BotaoAcao>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

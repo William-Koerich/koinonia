@@ -7,12 +7,25 @@ import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/types";
 
 /** Botão simples (sem confirmação) que chama uma Server Action e mostra o toast */
-export function BotaoAcao({ acao, children }: { acao: () => Promise<ActionResult>; children: React.ReactNode }) {
+export function BotaoAcao({
+  acao,
+  children,
+  variant = "ghost",
+  size = "sm",
+  className,
+}: {
+  acao: () => Promise<ActionResult>;
+  children: React.ReactNode;
+  variant?: React.ComponentProps<typeof Button>["variant"];
+  size?: React.ComponentProps<typeof Button>["size"];
+  className?: string;
+}) {
   const [pending, startTransition] = useTransition();
   return (
     <Button
-      size="sm"
-      variant="ghost"
+      size={size}
+      variant={variant}
+      className={className}
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

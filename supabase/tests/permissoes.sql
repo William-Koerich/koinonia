@@ -622,5 +622,110 @@ select koinonia_teste_bloqueia($$insert into koinonia_cantina_escalas (data) val
 reset role;
 
 \echo
+\echo '== Escala: confirmação, indisponibilidade e trocas'
+-- o membro está no DataShow da Escala Teste (seção ADMIN); o admin já serviu
+-- no DataShow em outra escala, então pode assumir a vaga numa troca
+insert into public.koinonia_escalas (id, data, descricao) values
+  ('99999999-0000-4000-a000-0000000000c1', current_date + 10, 'Escala Teste Troca');
+insert into public.koinonia_escala_atribuicoes (escala_id, funcao_id, profile_id)
+select '99999999-0000-4000-a000-0000000000c1', id, :'admin_id' from public.koinonia_escala_funcoes where funcao = 'DataShow';
+select id as atrib_membro from public.koinonia_escala_atribuicoes
+ where escala_id = '99999999-0000-4000-a000-000000000002' and profile_id = :'membro_id' \gset
+select id as atrib_admin from public.koinonia_escala_atribuicoes
+ where escala_id = '99999999-0000-4000-a000-0000000000c1' and profile_id = :'admin_id' \gset
+select set_config('teste.atrib_membro', :'atrib_membro', false), set_config('teste.atrib_admin', :'atrib_admin', false);
+insert into public.koinonia_escala_indisponibilidades (profile_id, data_inicio, data_fim, motivo)
+values (:'admin_id', current_date + 30, current_date + 32, 'Viagem');
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select resposta = 'pendente' from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
+  'quem é escalado começa sem resposta (pendente)');
+select koinonia_escala_responder(current_setting('teste.atrib_membro')::uuid, true);
+select koinonia_teste_ok((select resposta = 'confirmado' and respondido_em is not null from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
+  'membro confirma a própria escala');
+select koinonia_teste_bloqueia($$select koinonia_escala_responder(current_setting('teste.atrib_admin')::uuid, false)$$, 'não responde pela escala de outra pessoa');
+with u as (update koinonia_escala_atribuicoes set resposta = 'recusado' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'não altera a resposta direto na tabela') from u;
+
+with i as (insert into koinonia_escala_indisponibilidades (data_inicio, data_fim, motivo) values (current_date + 20, current_date + 20, 'Trabalho') returning profile_id)
+select koinonia_teste_ok((select profile_id from i) = auth.uid(), 'marca a própria indisponibilidade');
+select koinonia_teste_bloqueia(format($$insert into koinonia_escala_indisponibilidades (profile_id, data_inicio, data_fim) values (%L, current_date + 5, current_date + 5)$$,
+  current_setting('teste.admin')), 'não marca indisponibilidade de outra pessoa');
+select koinonia_teste_bloqueia($$insert into koinonia_escala_indisponibilidades (data_inicio, data_fim) values (current_date - 1, current_date)$$, 'não marca indisponibilidade no passado');
+select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades) = 1, 'vê só as próprias indisponibilidades');
+
+select koinonia_teste_ok(
+  exists (select 1 from koinonia_escala_troca_candidatos(current_setting('teste.atrib_membro')::uuid) where id = current_setting('teste.admin')::uuid)
+  and not exists (select 1 from koinonia_escala_troca_candidatos(current_setting('teste.atrib_membro')::uuid) where id = auth.uid()),
+  'candidatos à troca: quem já serviu na função, menos ele mesmo');
+select koinonia_teste_bloqueia(format($$select koinonia_escala_troca_solicitar(%L, %L)$$, current_setting('teste.atrib_membro'), current_setting('teste.pastor')),
+  'não pede troca para quem nunca serviu na função');
+select koinonia_teste_bloqueia(format($$select koinonia_escala_troca_solicitar(%L, %L)$$, current_setting('teste.atrib_admin'), current_setting('teste.membro')),
+  'não pede troca da escala de outra pessoa');
+select koinonia_escala_troca_solicitar(current_setting('teste.atrib_membro')::uuid, current_setting('teste.admin')::uuid, 'Vou viajar') as troca_id \gset
+select set_config('teste.troca', :'troca_id', false);
+select koinonia_teste_bloqueia(format($$select koinonia_escala_troca_solicitar(%L, %L)$$, current_setting('teste.atrib_membro'), current_setting('teste.admin')),
+  'um pedido de troca em andamento por vaga');
+select koinonia_teste_bloqueia($$select koinonia_escala_troca_decidir(current_setting('teste.troca')::uuid, true)$$, 'membro não aprova troca');
+select koinonia_teste_bloqueia($$insert into koinonia_escala_trocas (atribuicao_id, solicitante_id, substituto_id)
+  values (current_setting('teste.atrib_membro')::uuid, auth.uid(), current_setting('teste.admin')::uuid)$$, 'não cria troca direto na tabela');
+reset role;
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes
+                           where origem = 'escala' and publico_id = :'admin_id' and titulo like '% pediu uma troca na escala') = 1,
+  'substituto é notificado do pedido');
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+select koinonia_teste_bloqueia($$select koinonia_escala_troca_decidir(current_setting('teste.troca')::uuid, true)$$, 'liderança só aprova depois que o substituto aceita');
+reset role;
+
+select koinonia_teste_como('admin');
+set local role authenticated;
+select koinonia_escala_troca_responder(current_setting('teste.troca')::uuid, true);
+select koinonia_teste_ok((select status = 'aguardando_lider' from koinonia_escala_trocas where id = current_setting('teste.troca')::uuid),
+  'substituto aceita e a troca vai para aprovação');
+reset role;
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades) = 2, 'liderança vê as indisponibilidades de todos');
+select koinonia_escala_troca_decidir(current_setting('teste.troca')::uuid, true);
+select koinonia_teste_ok((select profile_id = current_setting('teste.admin')::uuid and resposta = 'confirmado'
+                            from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
+  'troca aprovada: a vaga passa para o substituto, já confirmado');
+reset role;
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where origem = 'escala' and publico_id = :'membro_id' and titulo = 'Troca aprovada') = 1,
+  'quem pediu é avisado da aprovação');
+
+select koinonia_teste_como('admin');
+set local role authenticated;
+select koinonia_escala_responder(current_setting('teste.atrib_membro')::uuid, false, 'Fiquei doente');
+select koinonia_teste_ok((select resposta = 'recusado' and motivo_recusa = 'Fiquei doente' from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
+  'recusa a escala com motivo');
+reset role;
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where origem = 'escala' and publico_id = :'pastor_id' and titulo like '% não poderá servir') = 1,
+  'liderança é avisada da recusa');
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+update koinonia_escala_atribuicoes set profile_id = current_setting('teste.membro')::uuid where id = current_setting('teste.atrib_membro')::uuid;
+select koinonia_teste_ok((select resposta = 'pendente' and motivo_recusa is null from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
+  'trocar a pessoa da vaga zera a resposta');
+reset role;
+
+-- admin indisponível no dia da Escala Teste: não pode ser escolhido para a troca
+insert into public.koinonia_escala_indisponibilidades (profile_id, data_inicio, data_fim)
+select :'admin_id', data, data from public.koinonia_escalas where id = '99999999-0000-4000-a000-000000000002';
+delete from public.koinonia_escala_atribuicoes where escala_id = '99999999-0000-4000-a000-000000000002' and profile_id = :'admin_id';
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select indisponivel from koinonia_escala_troca_candidatos(current_setting('teste.atrib_membro')::uuid) where id = current_setting('teste.admin')::uuid),
+  'candidato indisponível no dia aparece marcado');
+select koinonia_teste_bloqueia(format($$select koinonia_escala_troca_solicitar(%L, %L)$$, current_setting('teste.atrib_membro'), current_setting('teste.admin')),
+  'não pede troca para quem está indisponível no dia');
+reset role;
+
+\echo
 \echo 'Todos os testes passaram. Desfazendo alterações...'
 rollback;

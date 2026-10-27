@@ -32,7 +32,15 @@ export const menuItems: MenuItem[] = [
   { href: "/app/perfil", label: "Meu perfil", icon: UserIcon },
   { href: "/app/avisos", label: "Avisos", icon: MegaphoneIcon },
   { href: "/app/eventos", label: "Eventos", icon: CalendarDaysIcon },
-  { href: "/app/escala", label: "Escala", icon: ClipboardListIcon },
+  {
+    href: "/app/escala",
+    label: "Escala",
+    icon: ClipboardListIcon,
+    subitens: [
+      { href: "/app/escala", label: "Escalas" },
+      { href: "/app/escala/disponibilidade", label: "Minha disponibilidade" },
+    ],
+  },
   { href: "/app/cantina", label: "Cantina", icon: CoffeeIcon },
   { href: "/app/ministerios", label: "Ministérios", icon: WaypointsIcon },
   { href: "/app/gcs", label: "GCs", icon: UsersRoundIcon },
