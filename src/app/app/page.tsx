@@ -211,7 +211,9 @@ async function MinhasInscricoes({ meuId }: { meuId: string }) {
       ? { texto: "Confirmada", classe: "text-emerald-700" }
       : i.status === "recusada"
         ? { texto: "Recusada", classe: "text-destructive" }
-        : i.pagamento_informado_em
+        : i.status === "espera"
+          ? { texto: "Na fila de espera", classe: "text-sky-700" }
+          : i.pagamento_informado_em
           ? { texto: "Pagamento em conferência", classe: "text-amber-700" }
           : { texto: "Aguardando seu pagamento", classe: "text-amber-700" };
 

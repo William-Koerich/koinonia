@@ -30,12 +30,15 @@ import { adicionarInscrito } from "./actions";
 export function AdicionarInscrito({
   eventoId,
   pago,
+  podeFinanceiro,
   pessoas,
   jaInscritos,
 }: {
   eventoId: string;
   /** evento tem valor (mostra "pagamento já recebido") */
   pago: boolean;
+  /** só a tesouraria registra pagamento já recebido (lança a entrada no financeiro) */
+  podeFinanceiro: boolean;
   pessoas: PessoaOpcao[];
   jaInscritos: string[];
 }) {
@@ -140,7 +143,7 @@ export function AdicionarInscrito({
               <Textarea id="observacao_inscrito" rows={2} placeholder="Opcional" {...form.register("observacao")} />
             </Field>
 
-            {pago && (
+            {pago && podeFinanceiro && (
               <Controller
                 control={form.control}
                 name="pago"
@@ -149,7 +152,10 @@ export function AdicionarInscrito({
                     <Checkbox id="pago" checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
                     <div>
                       <Label htmlFor="pago">Pagamento já recebido</Label>
-                      <FieldDescription>A inscrição entra confirmada. Sem marcar, fica pendente.</FieldDescription>
+                      <FieldDescription>
+                        A inscrição entra confirmada e o valor é lançado nas entradas do financeiro (PIX). Sem marcar, fica
+                        pendente.
+                      </FieldDescription>
                     </div>
                   </div>
                 )}

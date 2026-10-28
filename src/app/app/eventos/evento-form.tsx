@@ -114,6 +114,25 @@ export function EventoForm({
             </Field>
           </div>
 
+          <Field data-invalid={!!errors.vagas}>
+            <FieldLabel htmlFor="vagas">Vagas</FieldLabel>
+            <Input
+              id="vagas"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              placeholder="Sem limite"
+              className="sm:max-w-48"
+              aria-invalid={!!errors.vagas}
+              {...form.register("vagas")}
+            />
+            <FieldDescription>
+              Opcional. Quando lotar, as próximas inscrições entram numa fila de espera e são chamadas na ordem
+              quando alguém desistir.
+            </FieldDescription>
+            <FieldError errors={[errors.vagas]} />
+          </Field>
+
           <Field data-invalid={!!errors.responsavel_id}>
             <FieldLabel htmlFor="responsavel_id">Responsável</FieldLabel>
             <Controller

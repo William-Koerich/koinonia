@@ -229,9 +229,12 @@ select koinonia_teste_ok((select count(*) from koinonia_evento_inscricoes where 
   'responsável vê só as inscrições do seu evento');
 select koinonia_teste_ok((select count(*) from koinonia_profiles where id = current_setting('teste.admin')::uuid) = 1,
   'responsável vê o contato de quem se inscreveu');
-with u as (update koinonia_evento_inscricoes set status = 'confirmada'
+-- evento pago: o pagamento é confirmado pela tesouraria (seção "Eventos: vagas..."); o responsável recusa
+select koinonia_teste_bloqueia($$update koinonia_evento_inscricoes set status = 'confirmada'
+  where evento_id = '99999999-0000-4000-a000-0000000000e5'$$, 'responsável sem financeiro não confirma pagamento');
+with u as (update koinonia_evento_inscricoes set status = 'recusada'
            where evento_id = '99999999-0000-4000-a000-0000000000e5' returning decidido_por)
-select koinonia_teste_ok(count(*) = 1 and bool_and(decidido_por = auth.uid()), 'responsável confirma a inscrição (e fica registrado quem decidiu)') from u;
+select koinonia_teste_ok(count(*) = 1 and bool_and(decidido_por = auth.uid()), 'responsável recusa a inscrição (e fica registrado quem decidiu)') from u;
 with u as (update koinonia_evento_inscricoes set status = 'confirmada'
            where evento_id = '99999999-0000-4000-a000-0000000000e2' and profile_id = auth.uid() returning 1)
 select koinonia_teste_ok(count(*) = 0, 'não aprova inscrição de evento que não é responsável') from u;
@@ -251,8 +254,8 @@ set local role authenticated;
 -- MEMBRO é o responsável pelo evento e5: adiciona um convidado já pago
 insert into koinonia_evento_inscricoes (evento_id, convidado_nome, convidado_celular, status)
 values ('99999999-0000-4000-a000-0000000000e5', 'Convidado Teste', '4733089872', 'confirmada');
-select koinonia_teste_ok((select status = 'confirmada' and adicionado_por = auth.uid() from koinonia_evento_inscricoes where convidado_nome = 'Convidado Teste'),
-  'responsável inscreve convidado sem conta (já confirmado)');
+select koinonia_teste_ok((select status = 'pendente' and adicionado_por = auth.uid() from koinonia_evento_inscricoes where convidado_nome = 'Convidado Teste'),
+  'responsável inscreve convidado sem conta (o "já pago" fica para a tesouraria)');
 select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, convidado_nome)
   values ('99999999-0000-4000-a000-0000000000e2', 'Intruso')$$, 'não adiciona convidado em evento que não é responsável');
 select koinonia_teste_bloqueia($$insert into koinonia_evento_inscricoes (evento_id, profile_id, convidado_nome)
@@ -653,7 +656,7 @@ select koinonia_teste_ok((select profile_id from i) = auth.uid(), 'marca a próp
 select koinonia_teste_bloqueia(format($$insert into koinonia_escala_indisponibilidades (profile_id, data_inicio, data_fim) values (%L, current_date + 5, current_date + 5)$$,
   current_setting('teste.admin')), 'não marca indisponibilidade de outra pessoa');
 select koinonia_teste_bloqueia($$insert into koinonia_escala_indisponibilidades (data_inicio, data_fim) values (current_date - 1, current_date)$$, 'não marca indisponibilidade no passado');
-select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades) = 1, 'vê só as próprias indisponibilidades');
+select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades where profile_id <> auth.uid()) = 0, 'vê só as próprias indisponibilidades');
 
 select koinonia_teste_ok(
   exists (select 1 from koinonia_escala_troca_candidatos(current_setting('teste.atrib_membro')::uuid) where id = current_setting('teste.admin')::uuid)
@@ -672,7 +675,7 @@ select koinonia_teste_bloqueia($$insert into koinonia_escala_trocas (atribuicao_
   values (current_setting('teste.atrib_membro')::uuid, auth.uid(), current_setting('teste.admin')::uuid)$$, 'não cria troca direto na tabela');
 reset role;
 select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes
-                           where origem = 'escala' and publico_id = :'admin_id' and titulo like '% pediu uma troca na escala') = 1,
+                           where created_at = now() and origem = 'escala' and publico_id = :'admin_id' and titulo like '% pediu uma troca na escala') = 1,
   'substituto é notificado do pedido');
 
 select koinonia_teste_como('pastor');
@@ -689,13 +692,13 @@ reset role;
 
 select koinonia_teste_como('pastor');
 set local role authenticated;
-select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades) = 2, 'liderança vê as indisponibilidades de todos');
+select koinonia_teste_ok((select count(*) from koinonia_escala_indisponibilidades where created_at = now()) = 2, 'liderança vê as indisponibilidades de todos');
 select koinonia_escala_troca_decidir(current_setting('teste.troca')::uuid, true);
 select koinonia_teste_ok((select profile_id = current_setting('teste.admin')::uuid and resposta = 'confirmado'
                             from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
   'troca aprovada: a vaga passa para o substituto, já confirmado');
 reset role;
-select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where origem = 'escala' and publico_id = :'membro_id' and titulo = 'Troca aprovada') = 1,
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where created_at = now() and origem = 'escala' and publico_id = :'membro_id' and titulo = 'Troca aprovada') = 1,
   'quem pediu é avisado da aprovação');
 
 select koinonia_teste_como('admin');
@@ -704,7 +707,7 @@ select koinonia_escala_responder(current_setting('teste.atrib_membro')::uuid, fa
 select koinonia_teste_ok((select resposta = 'recusado' and motivo_recusa = 'Fiquei doente' from koinonia_escala_atribuicoes where id = current_setting('teste.atrib_membro')::uuid),
   'recusa a escala com motivo');
 reset role;
-select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where origem = 'escala' and publico_id = :'pastor_id' and titulo like '% não poderá servir') = 1,
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where created_at = now() and origem = 'escala' and publico_id = :'pastor_id' and titulo like '% não poderá servir') = 1,
   'liderança é avisada da recusa');
 
 select koinonia_teste_como('pastor');
@@ -724,6 +727,119 @@ select koinonia_teste_ok((select indisponivel from koinonia_escala_troca_candida
   'candidato indisponível no dia aparece marcado');
 select koinonia_teste_bloqueia(format($$select koinonia_escala_troca_solicitar(%L, %L)$$, current_setting('teste.atrib_membro'), current_setting('teste.admin')),
   'não pede troca para quem está indisponível no dia');
+reset role;
+
+\echo
+\echo '== Eventos: vagas, fila de espera, check-in e pagamento'
+-- (o "pastor" do teste virou ADMIN na seção ADMIN; os dois têm acesso ao financeiro)
+insert into public.koinonia_eventos (id, titulo, cep, logradouro, numero, bairro, cidade, uf, inicio, fim, responsavel_id, vagas)
+values ('99999999-0000-4000-a000-0000000000b1', 'Evento Vagas', '01310100', 'Av', '1', 'B', 'C', 'SP',
+        now() + interval '5 days', now() + interval '5 days 2 hours', :'admin_id', 1);
+-- evento pago cujo responsável é o MEMBRO (gerencia o evento, mas não o financeiro)
+insert into public.koinonia_eventos (id, titulo, cep, logradouro, numero, bairro, cidade, uf, inicio, fim, responsavel_id, valor)
+values ('99999999-0000-4000-a000-0000000000b2', 'Evento Pago', '01310100', 'Av', '1', 'B', 'C', 'SP',
+        now() + interval '6 days', now() + interval '6 days 2 hours', :'membro_id', 50);
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+with i as (insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000b1', auth.uid()) returning status)
+select koinonia_teste_ok((select status from i) = 'confirmada', 'evento com vaga: inscrição ocupa a vaga');
+reset role;
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+with i as (insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000b1', auth.uid()) returning status)
+select koinonia_teste_ok((select status from i) = 'espera', 'evento lotado: inscrição vai para a fila de espera');
+select koinonia_teste_ok((select vagas = 1 and ocupadas = 1 and na_espera = 1 and minha_posicao = 1
+                            from koinonia_evento_lotacao('99999999-0000-4000-a000-0000000000b1')),
+  'membro vê a lotação e a própria posição na fila');
+reset role;
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+delete from koinonia_evento_inscricoes where evento_id = '99999999-0000-4000-a000-0000000000b1' and profile_id = auth.uid();
+reset role;
+select koinonia_teste_ok((select status = 'confirmada' and decidido_por is null from public.koinonia_evento_inscricoes
+                           where evento_id = '99999999-0000-4000-a000-0000000000b1' and profile_id = :'membro_id'),
+  'vaga liberada promove o primeiro da fila');
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes where created_at = now() and publico_id = :'membro_id' and titulo = 'Abriu uma vaga para você!') = 1,
+  'quem sai da fila é avisado');
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+with i as (insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000b1', auth.uid()) returning status)
+select koinonia_teste_ok((select status from i) = 'espera', 'lotou de novo: próximo vai para a fila');
+update koinonia_eventos set vagas = 2 where id = '99999999-0000-4000-a000-0000000000b1';
+select koinonia_teste_ok((select status = 'confirmada' from koinonia_evento_inscricoes
+                           where evento_id = '99999999-0000-4000-a000-0000000000b1' and profile_id = auth.uid()),
+  'aumentar as vagas promove a fila');
+reset role;
+
+-- check-in
+select codigo as codigo_membro from public.koinonia_evento_inscricoes
+ where evento_id = '99999999-0000-4000-a000-0000000000b1' and profile_id = :'membro_id' \gset
+select set_config('teste.codigo', :'codigo_membro', false);
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$select * from koinonia_evento_checkin('99999999-0000-4000-a000-0000000000b1', current_setting('teste.codigo')::uuid)$$,
+  'quem não gerencia o evento não faz check-in');
+with u as (update koinonia_evento_inscricoes set checkin_em = now() where profile_id = auth.uid() returning 1)
+select koinonia_teste_ok(count(*) = 0, 'membro não marca a própria presença') from u;
+reset role;
+select koinonia_teste_como('admin');
+set local role authenticated;
+select koinonia_teste_ok((select not ja_registrado and checkin_em is not null
+                            from koinonia_evento_checkin('99999999-0000-4000-a000-0000000000b1', current_setting('teste.codigo')::uuid)),
+  'responsável faz check-in lendo o QR Code');
+select koinonia_teste_ok((select ja_registrado from koinonia_evento_checkin('99999999-0000-4000-a000-0000000000b1', current_setting('teste.codigo')::uuid)),
+  'segunda leitura avisa que a presença já foi registrada');
+select koinonia_teste_ok((select checkin_por = auth.uid() from koinonia_evento_inscricoes where codigo = current_setting('teste.codigo')::uuid),
+  'registra quem fez o check-in');
+select koinonia_teste_bloqueia($$select * from koinonia_evento_checkin('99999999-0000-4000-a000-0000000000b2', current_setting('teste.codigo')::uuid)$$,
+  'QR Code de outro evento é rejeitado');
+-- convidado no evento pago, aguardando pagamento
+insert into koinonia_evento_inscricoes (evento_id, convidado_nome) values ('99999999-0000-4000-a000-0000000000b2', 'Convidado Pago');
+reset role;
+select id as insc_pago from public.koinonia_evento_inscricoes
+ where evento_id = '99999999-0000-4000-a000-0000000000b2' and convidado_nome = 'Convidado Pago' \gset
+select set_config('teste.insc_pago', :'insc_pago', false);
+
+-- pagamento: o responsável (sem financeiro) não confirma; a tesouraria confirma e lança a entrada
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$update koinonia_evento_inscricoes set status = 'confirmada' where id = current_setting('teste.insc_pago')::uuid$$,
+  'responsável sem financeiro não confirma pagamento');
+select koinonia_teste_bloqueia($$select koinonia_evento_confirmar_pagamento(current_setting('teste.insc_pago')::uuid, 'pix')$$,
+  'responsável sem financeiro não usa a confirmação da tesouraria');
+with i as (insert into koinonia_evento_inscricoes (evento_id, convidado_nome, status) values ('99999999-0000-4000-a000-0000000000b2', 'Outro Convidado', 'confirmada') returning status)
+select koinonia_teste_ok((select status from i) = 'pendente', 'responsável sem financeiro não inscreve como "já pago"');
+insert into koinonia_evento_inscricoes (evento_id, profile_id) values ('99999999-0000-4000-a000-0000000000b2', auth.uid());
+select koinonia_informar_pagamento('99999999-0000-4000-a000-0000000000b2');
+reset role;
+select koinonia_teste_ok((select count(*) from public.koinonia_notificacoes
+                           where created_at = now() and publico_id = :'pastor_id' and titulo = 'Pagamento de inscrição para conferir'
+                             and mensagem like '%Evento Pago') = 1,
+  '"já paguei" avisa a tesouraria');
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+select koinonia_evento_confirmar_pagamento(current_setting('teste.insc_pago')::uuid, 'dinheiro');
+select koinonia_teste_ok((select status = 'confirmada' from koinonia_evento_inscricoes where id = current_setting('teste.insc_pago')::uuid),
+  'tesouraria confirma o pagamento');
+select koinonia_teste_ok((select categoria = 'evento' and valor = 50 and forma_pagamento = 'dinheiro' and contribuinte_nome = 'Convidado Pago'
+                            from koinonia_financeiro_entradas where inscricao_id = current_setting('teste.insc_pago')::uuid),
+  'confirmação lança a entrada no financeiro (categoria evento, forma escolhida)');
+reset role;
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$update koinonia_evento_inscricoes set status = 'pendente' where id = current_setting('teste.insc_pago')::uuid$$,
+  'responsável sem financeiro não desfaz pagamento confirmado');
+reset role;
+select koinonia_teste_como('pastor');
+set local role authenticated;
+update koinonia_evento_inscricoes set status = 'pendente' where id = current_setting('teste.insc_pago')::uuid;
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_entradas where inscricao_id = current_setting('teste.insc_pago')::uuid) = 0,
+  'desfazer a confirmação apaga a entrada');
 reset role;
 
 \echo

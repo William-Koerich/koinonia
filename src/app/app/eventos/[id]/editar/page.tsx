@@ -38,6 +38,7 @@ export default async function EditarEventoPage({ params }: PageProps<"/app/event
               valor: evento.valor === null ? "" : formatarMoedaInput(Number(evento.valor).toFixed(2)),
               responsavel_id: evento.responsavel_id,
               publico: evento.publico,
+              vagas: evento.vagas === null ? "" : String(evento.vagas),
               pix_chave: evento.pix_chave ?? "",
               pix_tipo: evento.pix_tipo ?? "",
               pix_recebedor: evento.pix_recebedor ?? "",

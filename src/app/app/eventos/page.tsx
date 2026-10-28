@@ -43,6 +43,7 @@ export default async function EventosPage() {
     pendente: { rotulo: "Inscrição pendente", classe: "border-amber-500/50 text-amber-700" },
     confirmada: { rotulo: "Inscrito ✓", classe: "border-emerald-500/50 text-emerald-700" },
     recusada: { rotulo: "Inscrição recusada", classe: "border-destructive/50 text-destructive" },
+    espera: { rotulo: "Na fila de espera", classe: "border-sky-500/50 text-sky-700" },
   } as const;
 
   function acoes(evento: { id: string; titulo: string }) {

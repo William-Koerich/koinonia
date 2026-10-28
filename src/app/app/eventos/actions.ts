@@ -2,12 +2,13 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
 import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
 import { flash } from "@/lib/flash";
 import { formatarDataHora } from "@/lib/format";
-import { notificarCriacao } from "@/lib/notificacoes";
+import { dispararPendentes, notificarCriacao } from "@/lib/notificacoes";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
 import { eventoSchema, type EventoInput } from "@/lib/validation/evento";
@@ -35,6 +36,9 @@ export async function salvarEvento(id: string | null, input: EventoInput): Promi
       chave: `evento:${salvo.id}:novo`,
     });
   }
+
+  // mais vagas podem ter chamado gente da fila de espera (aviso por push)
+  if (id) after(dispararPendentes);
 
   updateTag(TAGS.eventos); // site público
   revalidatePath("/app/eventos");

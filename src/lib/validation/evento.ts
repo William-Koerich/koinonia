@@ -27,6 +27,12 @@ export const eventoSchema = enderecoSchema
       .refine((v) => v === null || v > 0, "O valor deve ser maior que zero (deixe vazio se for gratuito)."),
     responsavel_id: z.uuid("Selecione o responsável."),
     publico: z.enum(["todos", "homens", "mulheres"], { error: "Selecione o público." }),
+    // limite de inscrições; vazio = sem limite. Lotou, as próximas vão para a fila de espera
+    vagas: z
+      .string()
+      .trim()
+      .refine((v) => v === "" || (/^\d+$/.test(v) && Number(v) > 0 && Number(v) <= 100000), "Informe um número de vagas válido.")
+      .transform((v) => (v === "" ? null : Number(v))),
     // PIX próprio do evento (opcional; sem ele, vale o PIX da igreja)
     pix_chave: textoOpcional(100),
     pix_tipo: z
@@ -51,6 +57,7 @@ export const EVENTO_VAZIO: EventoInput = {
   valor: "",
   responsavel_id: "",
   publico: "todos",
+  vagas: "",
   pix_chave: "",
   pix_tipo: "",
   pix_recebedor: "",

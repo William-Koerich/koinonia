@@ -54,6 +54,7 @@ export const menuItems: MenuItem[] = [
       { href: "/app/financeiro", label: "Visão geral" },
       { href: "/app/financeiro/entradas", label: "Entradas" },
       { href: "/app/financeiro/contas-a-pagar", label: "Contas a pagar" },
+      { href: "/app/financeiro/pagamentos-eventos", label: "Pagamentos de eventos" },
     ],
   },
   { href: "/app/notificacoes", label: "Notificações", icon: BellIcon, roles: ["ADMIN", "PASTOR"] },

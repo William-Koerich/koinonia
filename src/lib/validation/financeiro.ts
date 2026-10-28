@@ -7,6 +7,8 @@ export const CATEGORIAS_ENTRADA = [
   { value: "oferta", label: "Oferta" },
   { value: "primicias", label: "Primícias" },
   { value: "doacao", label: "Doação" },
+  // lançada automaticamente quando a tesouraria confirma o pagamento de uma inscrição
+  { value: "evento", label: "Inscrição em evento" },
   { value: "outra", label: "Outra" },
 ] as const;
 
@@ -31,7 +33,7 @@ export const rotuloForma = (v: FormaPagamento) => FORMAS_PAGAMENTO.find((f) => f
 export const entradaSchema = z
   .object({
     data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data."),
-    categoria: z.enum(["dizimo", "oferta", "primicias", "doacao", "outra"], { error: "Selecione a categoria." }),
+    categoria: z.enum(["dizimo", "oferta", "primicias", "doacao", "evento", "outra"], { error: "Selecione a categoria." }),
     valor: z
       .string()
       .transform(lerMoeda)
