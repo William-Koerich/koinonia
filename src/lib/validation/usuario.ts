@@ -9,11 +9,13 @@ import { perfilSchema } from "./perfil";
  */
 export const PAPEIS_ATRIBUIVEIS = [
   { value: "MEMBRO", label: "Membro" },
+  // membro com acesso ao financeiro (entradas, contas, relatórios), sem gerenciar o resto
+  { value: "TESOUREIRO", label: "Tesoureiro" },
   { value: "PASTOR", label: "Pastor" },
   { value: "ADMIN", label: "Administrador" },
 ] as const;
 
-const papelSchema = z.enum(["MEMBRO", "PASTOR", "ADMIN"], { error: "Selecione o papel." });
+const papelSchema = z.enum(["MEMBRO", "TESOUREIRO", "PASTOR", "ADMIN"], { error: "Selecione o papel." });
 
 export const usuarioEdicaoSchema = perfilSchema.extend({
   gc_id: idOpcional,

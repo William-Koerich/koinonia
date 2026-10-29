@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
+import { getMinisteriosOpcoes } from "@/lib/data/app";
 import { formatarData, formatarMoeda, formatarMoedaInput, hojeISO } from "@/lib/format";
 import { ROLES_FINANCEIRO } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -23,12 +24,16 @@ export default async function RecorrentesPage() {
   const hoje = hojeISO();
 
   const supabase = await createClient();
-  const { data: recorrencias, error } = await supabase
-    .from("koinonia_financeiro_recorrencias")
-    .select("*, contas:koinonia_financeiro_contas(vencimento, status)")
-    .order("ativa", { ascending: false })
-    .order("descricao");
+  const [{ data: recorrencias, error }, ministerios] = await Promise.all([
+    supabase
+      .from("koinonia_financeiro_recorrencias")
+      .select("*, contas:koinonia_financeiro_contas(vencimento, status)")
+      .order("ativa", { ascending: false })
+      .order("descricao"),
+    getMinisteriosOpcoes(),
+  ]);
   if (error) throw new Error(error.message);
+  const nomeMinisterio = new Map(ministerios.map((m) => [m.id, m.nome]));
 
   return (
     <>
@@ -39,7 +44,7 @@ export default async function RecorrentesPage() {
         <ArrowLeftIcon className="size-4" /> Contas a pagar
       </Link>
       <PageHeader titulo="Contas recorrentes" descricao="Contas que se repetem. As próximas são lançadas automaticamente.">
-        <ContaDialog vencimentoPadrao={hoje} />
+        <ContaDialog vencimentoPadrao={hoje} ministerios={ministerios} />
       </PageHeader>
 
       {recorrencias.length === 0 ? (
@@ -72,7 +77,9 @@ export default async function RecorrentesPage() {
                       {!r.ativa && <Badge variant="secondary">Encerrada</Badge>}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {[rotuloDespesa(r.categoria), r.fornecedor].filter(Boolean).join(" · ")}
+                      {[rotuloDespesa(r.categoria), r.fornecedor, r.ministerio_id && nomeMinisterio.get(r.ministerio_id)]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                     <p className="mt-1 text-sm">
                       <RepeatIcon className="mr-1 inline size-3.5 text-muted-foreground" />
@@ -86,12 +93,14 @@ export default async function RecorrentesPage() {
                       <RecorrenciaDialog
                         id={r.id}
                         resumo={resumo}
+                        ministerios={ministerios}
                         valores={{
                           descricao: r.descricao,
                           categoria: r.categoria,
                           fornecedor: r.fornecedor ?? "",
                           valor: formatarMoedaInput(Number(r.valor).toFixed(2)),
                           observacao: r.observacao ?? "",
+                          ministerio_id: r.ministerio_id,
                           data_inicio: r.data_inicio,
                           termino: r.parcelas ? "parcelas" : r.data_fim ? "data" : "nunca",
                           data_fim: r.data_fim ?? "",

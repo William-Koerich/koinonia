@@ -20,14 +20,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { contaSchema, contaVazia, FREQUENCIAS, type ContaInput } from "@/lib/validation/financeiro";
 import { salvarConta } from "./actions";
-import { CamposConta, CamposTermino } from "./campos-conta";
+import { CamposConta, CamposTermino, type MinisterioOpcao } from "./campos-conta";
 
 /** Nova conta (avulsa ou recorrente) ou edição de uma conta */
 export function ContaDialog({
   vencimentoPadrao,
+  ministerios,
   conta,
 }: {
   vencimentoPadrao: string;
+  ministerios: MinisterioOpcao[];
   conta?: { id: string; valores: ContaInput; recorrente: boolean };
 }) {
   const [aberto, setAberto] = useState(false);
@@ -74,7 +76,7 @@ export function ContaDialog({
             </DialogHeader>
 
             <FieldGroup className="py-4">
-              <CamposConta />
+              <CamposConta ministerios={ministerios} />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field data-invalid={!!errors.vencimento}>

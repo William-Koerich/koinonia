@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { lerMoeda } from "@/lib/format";
-import { textoOpcional } from "./comum";
+import { idOpcional, textoOpcional } from "./comum";
 
 export const CATEGORIAS_ENTRADA = [
   { value: "dizimo", label: "Dízimo" },
@@ -46,6 +46,8 @@ export const entradaSchema = z
     profile_id: z.string(),
     contribuinte_nome: z.string().trim().max(150, "Nome muito longo."),
     descricao: textoOpcional(500),
+    // conta onde o dinheiro entrou (banco/caixa); opcional enquanto nenhuma conta foi cadastrada
+    carteira_id: idOpcional,
   })
   .superRefine((d, ctx) => {
     if (d.contribuinte === "membro" && !z.uuid().safeParse(d.profile_id).success) {
@@ -73,6 +75,7 @@ export const entradaVazia = (data: string): EntradaInput => ({
   profile_id: "",
   contribuinte_nome: "",
   descricao: "",
+  carteira_id: null,
 });
 
 /** Soma meses a "2026-10" */
@@ -151,6 +154,8 @@ const camposConta = {
   fornecedor: textoOpcional(150),
   valor: valorObrigatorio,
   observacao: textoOpcional(500),
+  // para o orçamento: de qual ministério é a despesa (vazio = despesa geral)
+  ministerio_id: idOpcional,
 };
 
 /** Como a recorrência termina: nunca, numa data ou depois de N vezes */
@@ -214,6 +219,7 @@ export const contaVazia = (vencimento: string): ContaInput => ({
   valor: "",
   vencimento,
   observacao: "",
+  ministerio_id: null,
   repetir: "nao",
   termino: "nunca",
   data_fim: "",
@@ -224,12 +230,13 @@ export const contaVazia = (vencimento: string): ContaInput => ({
 export const recorrenciaSchema = z
   .object({ ...camposConta, ...camposTermino, data_inicio: z.string() })
   .superRefine((d, ctx) => validarTermino(d, d.data_inicio, ctx))
-  .transform(({ descricao, categoria, fornecedor, valor, observacao, ...termino }) => ({
+  .transform(({ descricao, categoria, fornecedor, valor, observacao, ministerio_id, ...termino }) => ({
     descricao,
     categoria,
     fornecedor,
     valor,
     observacao,
+    ministerio_id,
     ...terminoParaBanco(termino),
   }));
 
@@ -241,6 +248,72 @@ export const pagamentoSchema = z.object({
   forma_pagamento: z.enum(["pix", "dinheiro", "cartao", "transferencia", "outra"], {
     error: "Selecione a forma de pagamento.",
   }),
+  // conta de onde saiu o dinheiro
+  carteira_id: idOpcional,
 });
 
 export type PagamentoInput = z.input<typeof pagamentoSchema>;
+
+// ---------------------------------------------------------------- contas e caixa
+
+export const TIPOS_CARTEIRA = [
+  { value: "banco", label: "Conta bancária" },
+  { value: "caixa", label: "Caixa (dinheiro)" },
+  { value: "aplicacao", label: "Aplicação / poupança" },
+] as const;
+
+export type TipoCarteira = (typeof TIPOS_CARTEIRA)[number]["value"];
+export const rotuloTipoCarteira = (v: TipoCarteira) => TIPOS_CARTEIRA.find((t) => t.value === v)?.label ?? v;
+
+/** Valor que pode ser zero ou negativo (saldo inicial de conta no vermelho) */
+const valorComSinal = z
+  .string()
+  .trim()
+  .transform((v) => {
+    const negativo = v.startsWith("-");
+    const n = lerMoeda(v);
+    return n === null ? 0 : negativo ? -n : n;
+  });
+
+export const carteiraSchema = z.object({
+  nome: z.string().trim().min(2, "Informe o nome.").max(80, "Use no máximo 80 caracteres."),
+  tipo: z.enum(["banco", "caixa", "aplicacao"], { error: "Selecione o tipo." }),
+  saldo_inicial: valorComSinal,
+  saldo_inicial_em: dataObrigatoria("a data do saldo inicial"),
+  padrao: z.boolean(),
+  observacao: textoOpcional(300),
+});
+
+export type CarteiraInput = z.input<typeof carteiraSchema>;
+
+export const carteiraVazia = (hoje: string): CarteiraInput => ({
+  nome: "",
+  tipo: "banco",
+  saldo_inicial: "",
+  saldo_inicial_em: hoje,
+  padrao: false,
+  observacao: "",
+});
+
+export const transferenciaSchema = z
+  .object({
+    data: dataObrigatoria("a data"),
+    origem_id: z.uuid("Escolha a conta de origem."),
+    destino_id: z.uuid("Escolha a conta de destino."),
+    valor: valorObrigatorio,
+    descricao: textoOpcional(300),
+  })
+  .refine((t) => t.origem_id !== t.destino_id, { message: "Escolha contas diferentes.", path: ["destino_id"] });
+
+export type TransferenciaInput = z.input<typeof transferenciaSchema>;
+
+// ---------------------------------------------------------------- orçamento
+
+export const orcamentoSchema = z.object({
+  ano: z.number().int().min(2000).max(2100),
+  ministerio_id: idOpcional,
+  valor: valorObrigatorio,
+  observacao: textoOpcional(300),
+});
+
+export type OrcamentoInput = z.input<typeof orcamentoSchema>;

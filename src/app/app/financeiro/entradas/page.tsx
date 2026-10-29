@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { getPessoas } from "@/lib/data/app";
+import { contarAnexos, getCarteiras } from "@/lib/data/financeiro";
 import { formatarData, formatarMoeda, formatarMoedaInput, hojeISO } from "@/lib/format";
 import { ROLES_FINANCEIRO } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,8 @@ import {
   somarMes,
   type CategoriaEntrada,
 } from "@/lib/validation/financeiro";
+import { Anexos } from "../_componentes/anexos";
+import { LinkHistorico } from "../_componentes/link-historico";
 import { MesNavegacao } from "../_componentes/mes-navegacao";
 import { TotalCard } from "../_componentes/total-card";
 import { excluirEntrada } from "./actions";
@@ -47,19 +50,22 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
     : null;
 
   const supabase = await createClient();
-  const [{ data: entradas, error }, pessoas] = await Promise.all([
+  const [{ data: entradas, error }, pessoas, carteiras] = await Promise.all([
     supabase
       .from("koinonia_financeiro_entradas")
       .select(
-        "id, data, categoria, valor, forma_pagamento, profile_id, contribuinte_nome, descricao, pessoa:koinonia_profiles!koinonia_financeiro_entradas_profile_id_fkey(nome_completo)",
+        "id, data, categoria, valor, forma_pagamento, profile_id, contribuinte_nome, descricao, carteira_id, pessoa:koinonia_profiles!koinonia_financeiro_entradas_profile_id_fkey(nome_completo)",
       )
       .gte("data", `${mes}-01`)
       .lt("data", `${somarMes(mes, 1)}-01`)
       .order("data", { ascending: false })
       .order("created_at", { ascending: false }),
     getPessoas(),
+    getCarteiras(true),
   ]);
   if (error) throw new Error(error.message);
+  const anexos = await contarAnexos("entrada_id", entradas.map((e) => e.id));
+  const nomeCarteira = new Map(carteiras.map((c) => [c.id, c.nome]));
 
   const totalMes = entradas.reduce((t, e) => t + Number(e.valor), 0);
   const porCategoria = CATEGORIAS_ENTRADA.map((c) => ({
@@ -85,13 +91,13 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
   return (
     <>
       <PageHeader titulo="Entradas" descricao="O que a igreja recebeu: dízimos, ofertas, primícias e doações.">
-        <EntradaDialog pessoas={pessoas} hoje={dataPadrao} />
+        <EntradaDialog pessoas={pessoas} carteiras={carteiras} hoje={dataPadrao} />
       </PageHeader>
 
       <MesNavegacao mes={mes} mesAtual={mesAtual} link={(m) => link({ mes: m })} />
 
       {/* totais: clicar numa categoria filtra a lista */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         <TotalCard rotulo="Total do mês" valor={totalMes} href={link({ categoria: null })} ativo={!categoria} destaque />
         {porCategoria.map((c) => (
           <TotalCard
@@ -120,7 +126,7 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
                 <TableHead>Quem contribuiu</TableHead>
                 <TableHead>Recebido em</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="w-20" />
+                <TableHead className="w-40" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -134,14 +140,24 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
                       <p className={cn(!quem && "text-muted-foreground")}>{quem ?? "Não identificado"}</p>
                       {e.descricao && <p className="text-xs text-muted-foreground">{e.descricao}</p>}
                     </TableCell>
-                    <TableCell className="align-top">{rotuloForma(e.forma_pagamento)}</TableCell>
+                    <TableCell className="align-top">
+                      <p>{rotuloForma(e.forma_pagamento)}</p>
+                      {e.carteira_id && <p className="text-xs text-muted-foreground">{nomeCarteira.get(e.carteira_id)}</p>}
+                    </TableCell>
                     <TableCell className="text-right align-top font-medium whitespace-nowrap tabular-nums">
                       {formatarMoeda(Number(e.valor))}
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex justify-end">
+                        <Anexos
+                          dono={{ tipo: "entrada", id: e.id }}
+                          quantidade={anexos.get(e.id) ?? 0}
+                          descricao={`${rotuloCategoria(e.categoria)} de ${formatarMoeda(Number(e.valor))} em ${formatarData(e.data)}`}
+                        />
+                        <LinkHistorico registroId={e.id} />
                         <EntradaDialog
                           pessoas={pessoas}
+                          carteiras={carteiras}
                           hoje={dataPadrao}
                           entrada={{
                             id: e.id,
@@ -154,6 +170,7 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
                               profile_id: e.profile_id ?? "",
                               contribuinte_nome: e.contribuinte_nome ?? "",
                               descricao: e.descricao ?? "",
+                              carteira_id: e.carteira_id,
                             },
                           }}
                         />
@@ -190,8 +207,8 @@ function Carregando() {
   return (
     <div className="space-y-4">
       <Skeleton className="h-10 w-64" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {Array.from({ length: 6 }, (_, i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {Array.from({ length: 7 }, (_, i) => (
           <Skeleton key={i} className="h-20" />
         ))}
       </div>

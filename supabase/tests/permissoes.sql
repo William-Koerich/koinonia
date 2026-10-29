@@ -628,6 +628,8 @@ reset role;
 \echo '== Escala: confirmação, indisponibilidade e trocas'
 -- o membro está no DataShow da Escala Teste (seção ADMIN); o admin já serviu
 -- no DataShow em outra escala, então pode assumir a vaga numa troca
+-- indisponibilidades reais do admin atrapalhariam a troca (o ROLLBACK final as devolve)
+delete from public.koinonia_escala_indisponibilidades where profile_id = :'admin_id';
 insert into public.koinonia_escalas (id, data, descricao) values
   ('99999999-0000-4000-a000-0000000000c1', current_date + 10, 'Escala Teste Troca');
 insert into public.koinonia_escala_atribuicoes (escala_id, funcao_id, profile_id)
@@ -840,6 +842,90 @@ set local role authenticated;
 update koinonia_evento_inscricoes set status = 'pendente' where id = current_setting('teste.insc_pago')::uuid;
 select koinonia_teste_ok((select count(*) from koinonia_financeiro_entradas where inscricao_id = current_setting('teste.insc_pago')::uuid) = 0,
   'desfazer a confirmação apaga a entrada');
+reset role;
+
+\echo
+\echo '== Financeiro: tesoureiro, contas e saldos, comprovantes, auditoria e orçamento'
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_carteiras) = 0
+                         and (select count(*) from koinonia_financeiro_auditoria) = 0,
+  'membro comum não vê contas nem o histórico do financeiro');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_carteiras (nome, tipo, saldo_inicial_em) values ('Hack', 'caixa', current_date)$$,
+  'membro comum não cria conta');
+select koinonia_teste_bloqueia($$insert into storage.objects (bucket_id, name) values ('koinonia-financeiro', 'hack.pdf')$$,
+  'membro comum não envia comprovante');
+reset role;
+
+-- o admin torna o MEMBRO tesoureiro
+select koinonia_teste_como('admin');
+set local role authenticated;
+with u as (update koinonia_profiles set role = 'TESOUREIRO' where id = current_setting('teste.membro')::uuid returning role)
+select koinonia_teste_ok((select role from u) = 'TESOUREIRO', 'admin define o papel Tesoureiro');
+reset role;
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok(koinonia_pode_financeiro(), 'tesoureiro acessa o financeiro');
+with i as (insert into storage.objects (bucket_id, name) values ('koinonia-financeiro', 'entradas/teste/recibo.pdf') returning 1)
+select koinonia_teste_ok(count(*) = 1, 'tesoureiro envia comprovante ao bucket privado') from i;
+select koinonia_teste_ok((select count(*) from koinonia_profiles) > 1, 'tesoureiro vê o nome de quem contribuiu');
+select koinonia_teste_bloqueia('insert into koinonia_escalas (data, descricao) values (current_date, ''x'')', 'tesoureiro não gerencia escala');
+with u as (update koinonia_eventos set titulo = 'Hack' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'tesoureiro não edita eventos') from u;
+
+insert into koinonia_financeiro_carteiras (id, nome, tipo, saldo_inicial, saldo_inicial_em) values
+  ('99999999-0000-4000-a000-0000000000f1', 'Caixa Teste', 'caixa', 100, current_date - 10);
+insert into koinonia_financeiro_carteiras (id, nome, tipo, saldo_inicial, saldo_inicial_em, padrao) values
+  ('99999999-0000-4000-a000-0000000000f2', 'Banco Teste', 'banco', 1000, current_date - 10, true);
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_carteiras (nome, tipo, saldo_inicial_em, padrao) values ('Outra', 'banco', current_date, true)$$,
+  'só uma conta padrão');
+insert into koinonia_financeiro_entradas (id, data, categoria, valor, forma_pagamento, carteira_id) values
+  ('99999999-0000-4000-a000-0000000000f3', current_date, 'oferta', 50, 'dinheiro', '99999999-0000-4000-a000-0000000000f1'),
+  -- antes do saldo inicial: não conta
+  ('99999999-0000-4000-a000-0000000000f4', current_date - 20, 'oferta', 999, 'dinheiro', '99999999-0000-4000-a000-0000000000f1');
+insert into koinonia_financeiro_contas (descricao, categoria, valor, vencimento, status, pago_em, valor_pago, forma_pagamento, carteira_id)
+values ('Conta Teste', 'energia', 30, current_date, 'paga', current_date, 30, 'pix', '99999999-0000-4000-a000-0000000000f2');
+insert into koinonia_financeiro_transferencias (data, origem_id, destino_id, valor)
+values (current_date, '99999999-0000-4000-a000-0000000000f1', '99999999-0000-4000-a000-0000000000f2', 20);
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_transferencias (data, origem_id, destino_id, valor)
+  values (current_date, '99999999-0000-4000-a000-0000000000f1', '99999999-0000-4000-a000-0000000000f1', 5)$$, 'transferência entre contas diferentes');
+select koinonia_teste_ok(
+  (select saldo from koinonia_financeiro_saldos(current_date) where carteira_id = '99999999-0000-4000-a000-0000000000f1') = 130
+  and (select saldo from koinonia_financeiro_saldos(current_date) where carteira_id = '99999999-0000-4000-a000-0000000000f2') = 990,
+  'saldo = inicial + entradas − pagamentos ± transferências (desde a data do saldo inicial)');
+
+update koinonia_financeiro_entradas set valor = 60 where id = '99999999-0000-4000-a000-0000000000f3';
+select koinonia_teste_ok((select acao = 'alterou' and alterado_por = auth.uid() and dados->'valor' = '[50, 60]'::jsonb
+                            from koinonia_financeiro_auditoria
+                           where registro_id = '99999999-0000-4000-a000-0000000000f3' and acao = 'alterou'),
+  'histórico registra quem alterou e o valor antes/depois');
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_auditoria
+                           where registro_id = '99999999-0000-4000-a000-0000000000f3' and acao = 'criou' and alterado_por = auth.uid()) = 1,
+  'histórico registra quem criou');
+select koinonia_teste_bloqueia($$update koinonia_financeiro_auditoria set acao = 'criou'$$, 'ninguém altera o histórico');
+select koinonia_teste_bloqueia($$delete from koinonia_financeiro_auditoria$$, 'ninguém apaga o histórico');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_auditoria (tabela, registro_id, acao, dados) values ('x', gen_random_uuid(), 'criou', '{}')$$,
+  'ninguém escreve no histórico à mão');
+
+insert into koinonia_financeiro_anexos (entrada_id, path, nome, tipo, tamanho)
+values ('99999999-0000-4000-a000-0000000000f3', 'entradas/teste.pdf', 'recibo.pdf', 'application/pdf', 1000);
+select koinonia_teste_ok((select count(*) from koinonia_financeiro_anexos where entrada_id = '99999999-0000-4000-a000-0000000000f3') = 1,
+  'tesoureiro anexa comprovante');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_anexos (path, nome, tipo, tamanho) values ('solto.pdf', 'x', 'application/pdf', 1)$$,
+  'comprovante sempre pertence a um lançamento');
+
+insert into koinonia_financeiro_orcamentos (ano, ministerio_id, valor) values (2026, null, 1000);
+insert into koinonia_financeiro_orcamentos (ano, ministerio_id, valor)
+select 2026, id, 500 from koinonia_ministerios where nome = 'Teste Ministério A';
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_orcamentos (ano, ministerio_id, valor) values (2026, null, 10)$$,
+  'um orçamento geral por ano');
+
+-- pagamento de inscrição em dinheiro cai no caixa
+select koinonia_evento_confirmar_pagamento(current_setting('teste.insc_pago')::uuid, 'dinheiro');
+select koinonia_teste_ok((select carteira_id = '99999999-0000-4000-a000-0000000000f1' from koinonia_financeiro_entradas
+                           where inscricao_id = current_setting('teste.insc_pago')::uuid),
+  'pagamento de inscrição em dinheiro entra no caixa');
 reset role;
 
 \echo

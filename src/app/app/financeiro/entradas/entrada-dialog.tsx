@@ -28,19 +28,24 @@ import {
   FORMAS_PAGAMENTO,
   type EntradaInput,
 } from "@/lib/validation/financeiro";
+import type { CarteiraOpcao } from "@/lib/carteiras";
+import { carteiraSugerida } from "@/lib/carteiras";
+import { CarteiraSelect } from "../_componentes/carteira-select";
 import { salvarEntrada } from "./actions";
 
 export function EntradaDialog({
   pessoas,
+  carteiras,
   hoje,
   entrada,
 }: {
   pessoas: PessoaOpcao[];
+  carteiras: CarteiraOpcao[];
   hoje: string;
   entrada?: { id: string; valores: EntradaInput };
 }) {
   const [aberto, setAberto] = useState(false);
-  const valoresIniciais = entrada?.valores ?? entradaVazia(hoje);
+  const valoresIniciais = entrada?.valores ?? { ...entradaVazia(hoje), carteira_id: carteiraSugerida(carteiras, "pix") };
 
   const { form, pending, onSubmit } = useActionForm({
     schema: entradaSchema,
@@ -70,11 +75,11 @@ export function EntradaDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <form onSubmit={onSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>{entrada ? "Editar entrada" : "Nova entrada"}</DialogTitle>
-            <DialogDescription>Dízimos, ofertas, primícias e doações recebidos pela igreja.</DialogDescription>
+            <DialogDescription>Dízimos, ofertas, primícias, doações e outros valores recebidos pela igreja.</DialogDescription>
           </DialogHeader>
 
           <FieldGroup className="py-4">
@@ -129,7 +134,14 @@ export function EntradaDialog({
                   control={form.control}
                   name="forma_pagamento"
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        // lançamento novo: dinheiro sugere o caixa; o resto, a conta padrão
+                        if (!entrada) form.setValue("carteira_id", carteiraSugerida(carteiras, v));
+                      }}
+                    >
                       <SelectTrigger id="forma_pagamento" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
@@ -146,6 +158,18 @@ export function EntradaDialog({
                 <FieldError errors={[errors.forma_pagamento]} />
               </Field>
             </div>
+
+            <Field data-invalid={!!errors.carteira_id}>
+              <FieldLabel htmlFor="carteira_id">Entrou na conta</FieldLabel>
+              <Controller
+                control={form.control}
+                name="carteira_id"
+                render={({ field }) => (
+                  <CarteiraSelect id="carteira_id" carteiras={carteiras} value={field.value} onChange={field.onChange} />
+                )}
+              />
+              <FieldError errors={[errors.carteira_id]} />
+            </Field>
 
             <Field>
               <FieldLabel>Quem contribuiu</FieldLabel>

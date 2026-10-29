@@ -8,9 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIAS_DESPESA } from "@/lib/validation/financeiro";
 
-/** Campos comuns de conta e recorrência: descrição, categoria, fornecedor, valor */
-export function CamposConta() {
-  const form = useFormContext<{ descricao: string; categoria: string; fornecedor: string; valor: string }>();
+const GERAL = "geral";
+
+export type MinisterioOpcao = { id: string; nome: string };
+
+/** Campos comuns de conta e recorrência: descrição, categoria, fornecedor, valor, ministério */
+export function CamposConta({ ministerios }: { ministerios: MinisterioOpcao[] }) {
+  const form = useFormContext<{
+    descricao: string;
+    categoria: string;
+    fornecedor: string;
+    valor: string;
+    ministerio_id: string | null;
+  }>();
   const { errors } = form.formState;
 
   return (
@@ -55,11 +65,35 @@ export function CamposConta() {
           <FieldError errors={[errors.valor]} />
         </Field>
       </div>
-      <Field data-invalid={!!errors.fornecedor}>
-        <FieldLabel htmlFor="fornecedor">Fornecedor / a quem pagar</FieldLabel>
-        <Input id="fornecedor" placeholder="Opcional (ex.: Celesc)" {...form.register("fornecedor")} />
-        <FieldError errors={[errors.fornecedor]} />
-      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field data-invalid={!!errors.fornecedor}>
+          <FieldLabel htmlFor="fornecedor">Fornecedor / a quem pagar</FieldLabel>
+          <Input id="fornecedor" placeholder="Opcional (ex.: Celesc)" {...form.register("fornecedor")} />
+          <FieldError errors={[errors.fornecedor]} />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="ministerio_id">Ministério (orçamento)</FieldLabel>
+          <Controller
+            control={form.control}
+            name="ministerio_id"
+            render={({ field }) => (
+              <Select value={field.value ?? GERAL} onValueChange={(v) => field.onChange(v === GERAL ? null : v)}>
+                <SelectTrigger id="ministerio_id" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={GERAL}>Despesa geral da igreja</SelectItem>
+                  {ministerios.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
+      </div>
     </>
   );
 }

@@ -59,7 +59,7 @@ async function Painel({ searchParams }: Pick<PageProps<"/app/financeiro">, "sear
   });
   if (erroGerar) throw new Error(erroGerar.message);
 
-  const [entradasR, pagasR, doMesR, vencidasR, proximasR] = await Promise.all([
+  const [entradasR, pagasR, doMesR, vencidasR, proximasR, carteirasR, saldosR] = await Promise.all([
     supabase.from("koinonia_financeiro_entradas").select("data, categoria, valor").gte("data", `${primeiroMes}-01`).lte("data", fimDoMes(mes)),
     // regime de caixa: a despesa conta no mês em que foi paga
     supabase
@@ -83,6 +83,8 @@ async function Painel({ searchParams }: Pick<PageProps<"/app/financeiro">, "sear
       .lte("vencimento", limiteProximas)
       .order("vencimento")
       .limit(8),
+    supabase.from("koinonia_financeiro_carteiras").select("id, nome").eq("ativa", true).order("padrao", { ascending: false }).order("nome"),
+    supabase.rpc("koinonia_financeiro_saldos", { p_ate: hoje }),
   ]);
   for (const r of [entradasR, pagasR, doMesR, vencidasR, proximasR]) if (r.error) throw new Error(r.error.message);
   const entradas = entradasR.data ?? [];
@@ -90,6 +92,9 @@ async function Painel({ searchParams }: Pick<PageProps<"/app/financeiro">, "sear
   const doMes = doMesR.data ?? [];
   const vencidas = vencidasR.data ?? [];
   const proximas = proximasR.data ?? [];
+  const saldoDe = new Map((saldosR.data ?? []).map((x) => [x.carteira_id, Number(x.saldo)]));
+  const contasBancarias = (carteirasR.data ?? []).map((c) => ({ ...c, saldo: saldoDe.get(c.id) ?? 0 }));
+  const saldoEmContas = contasBancarias.reduce((t, c) => t + c.saldo, 0);
 
   // série dos 12 meses
   const meses: MesSerie[] = Array.from({ length: 12 }, (_, i) => {
@@ -142,6 +147,9 @@ async function Painel({ searchParams }: Pick<PageProps<"/app/financeiro">, "sear
         <Button asChild variant="outline">
           <Link href="/app/financeiro/contas-a-pagar">Contas a pagar</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/app/financeiro/relatorio">Relatório (PDF)</Link>
+        </Button>
       </PageHeader>
 
       <MesNavegacao mes={mes} mesAtual={mesAtual} link={link} />
@@ -190,6 +198,38 @@ async function Painel({ searchParams }: Pick<PageProps<"/app/financeiro">, "sear
           />
         </div>
       </div>
+
+      {/* dinheiro disponível hoje em cada conta */}
+      {contasBancarias.length > 0 ? (
+        <Link href="/app/financeiro/contas-e-caixa" className="group mb-6 block">
+          <Card className="py-4 transition-colors group-hover:bg-muted/50">
+            <CardContent className="flex flex-col gap-3 px-4 md:flex-row md:items-center md:gap-8">
+              <div className="shrink-0">
+                <p className="text-xs text-muted-foreground">Saldo em contas hoje</p>
+                <p className={cn("text-2xl font-semibold tabular-nums", saldoEmContas < 0 && "text-destructive")}>
+                  {formatarMoeda(saldoEmContas)}
+                </p>
+              </div>
+              <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                {contasBancarias.map((c) => (
+                  <li key={c.id}>
+                    <span className="text-muted-foreground">{c.nome}:</span>{" "}
+                    <span className={cn("font-medium tabular-nums", c.saldo < 0 && "text-destructive")}>{formatarMoeda(c.saldo)}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </Link>
+      ) : (
+        <p className="mb-6 rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          Para ver quanto há no banco e no caixa,{" "}
+          <Link href="/app/financeiro/contas-e-caixa" className="text-primary underline-offset-4 hover:underline">
+            cadastre as contas com o saldo inicial
+          </Link>
+          .
+        </p>
+      )}
 
       {/* gráficos dos 12 meses */}
       <div className="mb-6 grid gap-4 xl:grid-cols-2">

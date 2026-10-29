@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
+import { removerArquivosDe } from "@/lib/data/financeiro";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
 import { ROLES_FINANCEIRO } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -20,17 +21,18 @@ export async function salvarEntrada(id: string | null, input: EntradaInput): Pro
     : await supabase.from("koinonia_financeiro_entradas").insert(parsed.data);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
-  revalidatePath("/app/financeiro/entradas");
+  revalidatePath("/app/financeiro", "layout");
   return { ok: true, message: id ? "Entrada atualizada." : "Entrada registrada." };
 }
 
 export async function excluirEntrada(id: string): Promise<ActionResult> {
   if (!(await autorizar(...ROLES_FINANCEIRO))) return { ok: false, error: SEM_PERMISSAO };
 
+  await removerArquivosDe("entrada_id", id);
   const supabase = await createClient();
   const { error } = await supabase.from("koinonia_financeiro_entradas").delete().eq("id", id);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
-  revalidatePath("/app/financeiro/entradas");
+  revalidatePath("/app/financeiro", "layout");
   return { ok: true, message: "Entrada excluída." };
 }

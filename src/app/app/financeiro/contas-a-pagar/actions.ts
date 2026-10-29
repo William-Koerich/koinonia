@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { autorizar, SEM_PERMISSAO } from "@/lib/actions";
+import { removerArquivosDe } from "@/lib/data/financeiro";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
 import { hojeISO } from "@/lib/format";
 import { ROLES_FINANCEIRO } from "@/lib/permissions";
@@ -21,7 +22,7 @@ import {
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 function revalidar() {
-  revalidatePath("/app/financeiro/contas-a-pagar", "layout");
+  revalidatePath("/app/financeiro", "layout");
 }
 
 /** Gera as contas recorrentes até o fim do mês seguinte (ou do mês informado, se for depois) */
@@ -57,10 +58,10 @@ export async function salvarConta(id: string | null, input: ContaInput): Promise
     return { ok: true, message: "Conta lançada." };
   }
 
-  const { descricao, categoria, fornecedor, valor, observacao } = conta;
+  const { descricao, categoria, fornecedor, valor, observacao, ministerio_id } = conta;
   const { error } = await supabase
     .from("koinonia_financeiro_recorrencias")
-    .insert({ descricao, categoria, fornecedor, valor, observacao, ...recorrencia });
+    .insert({ descricao, categoria, fornecedor, valor, observacao, ministerio_id, ...recorrencia });
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
   const { error: erroGerar } = await gerarContas(supabase, conta.vencimento);
@@ -93,7 +94,7 @@ export async function desfazerPagamento(id: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("koinonia_financeiro_contas")
-    .update({ status: "pendente", pago_em: null, valor_pago: null, forma_pagamento: null })
+    .update({ status: "pendente", pago_em: null, valor_pago: null, forma_pagamento: null, carteira_id: null })
     .eq("id", id);
   if (error) return { ok: false, error: mensagemErroBanco(error) };
 
@@ -109,10 +110,11 @@ export async function excluirConta(id: string): Promise<ActionResult> {
   const { data: conta } = await supabase.from("koinonia_financeiro_contas").select("recorrencia_id").eq("id", id).maybeSingle();
   if (!conta) return { ok: false, error: "Conta não encontrada." };
 
+  if (!conta.recorrencia_id) await removerArquivosDe("conta_id", id);
   const { error } = conta.recorrencia_id
     ? await supabase
         .from("koinonia_financeiro_contas")
-        .update({ status: "cancelada", pago_em: null, valor_pago: null, forma_pagamento: null })
+        .update({ status: "cancelada", pago_em: null, valor_pago: null, forma_pagamento: null, carteira_id: null })
         .eq("id", id)
     : await supabase.from("koinonia_financeiro_contas").delete().eq("id", id);
   if (error) return { ok: false, error: mensagemErroBanco(error) };

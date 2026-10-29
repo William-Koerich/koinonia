@@ -6,6 +6,7 @@ import type { Role } from "./types";
 export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Administrador",
   PASTOR: "Pastor",
+  TESOUREIRO: "Tesoureiro",
   LIDER_MINISTERIO: "Líder de ministério",
   MEMBRO: "Membro",
 };
@@ -19,7 +20,7 @@ export function isAdminOrPastor(role: Role): boolean {
 }
 
 /** Quem acessa o financeiro (espelha koinonia_pode_financeiro() no banco) */
-export const ROLES_FINANCEIRO: Role[] = ["ADMIN", "PASTOR"];
+export const ROLES_FINANCEIRO: Role[] = ["ADMIN", "PASTOR", "TESOUREIRO"];
 
 /** Quem vê e cadastra visitantes (espelha koinonia_pode_visitantes() no banco) */
 export const ROLES_VISITANTES: Role[] = ["ADMIN", "PASTOR"];

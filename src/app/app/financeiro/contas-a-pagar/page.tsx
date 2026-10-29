@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
+import { getMinisteriosOpcoes } from "@/lib/data/app";
+import { contarAnexos, getCarteiras } from "@/lib/data/financeiro";
 import { formatarData, formatarMoeda, formatarMoedaInput, hojeISO } from "@/lib/format";
 import { ROLES_FINANCEIRO } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import { carteiraSugerida } from "@/lib/carteiras";
 import { cn } from "@/lib/utils";
 import { fimDoMes, mesValido, rotuloDespesa, rotuloForma, rotuloFrequencia, somarMes } from "@/lib/validation/financeiro";
+import { Anexos } from "../_componentes/anexos";
+import { LinkHistorico } from "../_componentes/link-historico";
 import { MesNavegacao } from "../_componentes/mes-navegacao";
 import { TotalCard } from "../_componentes/total-card";
 import { desfazerPagamento, excluirConta, reativarConta } from "./actions";
@@ -51,8 +56,8 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
   if (erroGerar) throw new Error(erroGerar.message);
 
   const colunas =
-    "id, descricao, categoria, fornecedor, valor, vencimento, status, pago_em, valor_pago, forma_pagamento, observacao, recorrencia_id, ocorrencia, recorrencia:koinonia_financeiro_recorrencias(frequencia, parcelas)";
-  const [{ data: doMes, error }, { data: vencidas, error: erroVencidas }] = await Promise.all([
+    "id, descricao, categoria, fornecedor, valor, vencimento, status, pago_em, valor_pago, forma_pagamento, observacao, recorrencia_id, ocorrencia, ministerio_id, carteira_id, recorrencia:koinonia_financeiro_recorrencias(frequencia, parcelas)";
+  const [{ data: doMes, error }, { data: vencidas, error: erroVencidas }, ministerios, carteiras] = await Promise.all([
     supabase
       .from("koinonia_financeiro_contas")
       .select(colunas)
@@ -68,9 +73,14 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
       .lt("vencimento", hoje)
       .order("vencimento")
       .order("descricao"),
+    getMinisteriosOpcoes(),
+    getCarteiras(true),
   ]);
   if (error) throw new Error(error.message);
   if (erroVencidas) throw new Error(erroVencidas.message);
+  const anexos = await contarAnexos("conta_id", [...new Set([...doMes, ...vencidas].map((c) => c.id))]);
+  const nomeMinisterio = new Map(ministerios.map((m) => [m.id, m.nome]));
+  const nomeCarteira = new Map(carteiras.map((c) => [c.id, c.nome]));
 
   const ativas = doMes.filter((c) => c.status !== "cancelada");
   const soma = (lista: { valor: number | string }[]) => lista.reduce((t, c) => t + Number(c.valor), 0);
@@ -102,7 +112,7 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
             <RepeatIcon /> Contas recorrentes
           </Link>
         </Button>
-        <ContaDialog vencimentoPadrao={vencimentoPadrao} />
+        <ContaDialog vencimentoPadrao={vencimentoPadrao} ministerios={ministerios} />
       </PageHeader>
 
       <MesNavegacao mes={mes} mesAtual={mesAtual} link={(m) => link({ mes: m })} />
@@ -156,7 +166,7 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                 <TableHead>Conta</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Situação</TableHead>
-                <TableHead className="w-32" />
+                <TableHead className="w-48" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -177,7 +187,9 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                     <TableCell className="align-top">
                       <p className={cn("font-medium", cancelada && "line-through")}>{c.descricao}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[rotuloDespesa(c.categoria), c.fornecedor].filter(Boolean).join(" · ")}
+                        {[rotuloDespesa(c.categoria), c.fornecedor, c.ministerio_id && nomeMinisterio.get(c.ministerio_id)]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </p>
                       {repeticao && (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -199,6 +211,7 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                           <p className="mt-1 text-xs text-muted-foreground">
                             {c.pago_em && formatarData(c.pago_em)}
                             {c.forma_pagamento && ` · ${rotuloForma(c.forma_pagamento)}`}
+                            {c.carteira_id && ` · ${nomeCarteira.get(c.carteira_id)}`}
                           </p>
                         </div>
                       ) : cancelada ? (
@@ -215,15 +228,25 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                       <div className="flex items-center justify-end gap-1">
                         {c.status === "pendente" && (
                           <PagarDialog
+                            carteiras={carteiras}
                             contaId={c.id}
                             descricao={`${c.descricao} — vence ${formatarData(c.vencimento)}`}
                             valores={{
                               pago_em: hoje,
                               valor_pago: formatarMoedaInput(Number(c.valor).toFixed(2)),
                               forma_pagamento: "pix",
+                              carteira_id: carteiraSugerida(carteiras, "pix"),
                             }}
                           />
                         )}
+                        {!cancelada && (
+                          <Anexos
+                            dono={{ tipo: "conta", id: c.id }}
+                            quantidade={anexos.get(c.id) ?? 0}
+                            descricao={`${c.descricao} — ${formatarMoeda(Number(c.valor))}, vencimento ${formatarData(c.vencimento)}`}
+                          />
+                        )}
+                        <LinkHistorico registroId={c.id} />
                         {c.status === "paga" && (
                           <BotaoAcao acao={desfazerPagamento.bind(null, c.id)}>Desfazer</BotaoAcao>
                         )}
@@ -231,6 +254,7 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                         {c.status === "pendente" && (
                           <ContaDialog
                             vencimentoPadrao={vencimentoPadrao}
+                            ministerios={ministerios}
                             conta={{
                               id: c.id,
                               recorrente: !!c.recorrencia_id,
@@ -241,6 +265,7 @@ async function Contas({ searchParams }: Pick<PageProps<"/app/financeiro/contas-a
                                 valor: formatarMoedaInput(Number(c.valor).toFixed(2)),
                                 vencimento: c.vencimento,
                                 observacao: c.observacao ?? "",
+                                ministerio_id: c.ministerio_id,
                                 repetir: "nao",
                                 termino: "nunca",
                                 data_fim: "",

@@ -20,10 +20,22 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FORMAS_PAGAMENTO, pagamentoSchema, type PagamentoInput } from "@/lib/validation/financeiro";
+import { carteiraSugerida, type CarteiraOpcao } from "@/lib/carteiras";
+import { CarteiraSelect } from "../_componentes/carteira-select";
 import { pagarConta } from "./actions";
 
 /** Registra o pagamento: data, valor pago (pode ter juros/desconto) e forma */
-export function PagarDialog({ contaId, descricao, valores }: { contaId: string; descricao: string; valores: PagamentoInput }) {
+export function PagarDialog({
+  contaId,
+  descricao,
+  valores,
+  carteiras,
+}: {
+  contaId: string;
+  descricao: string;
+  valores: PagamentoInput;
+  carteiras: CarteiraOpcao[];
+}) {
   const [aberto, setAberto] = useState(false);
   const { form, pending, onSubmit } = useActionForm({
     schema: pagamentoSchema,
@@ -83,7 +95,13 @@ export function PagarDialog({ contaId, descricao, valores }: { contaId: string; 
                 control={form.control}
                 name="forma_pagamento"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      form.setValue("carteira_id", carteiraSugerida(carteiras, v));
+                    }}
+                  >
                     <SelectTrigger id="forma_pagamento" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -98,6 +116,16 @@ export function PagarDialog({ contaId, descricao, valores }: { contaId: string; 
                 )}
               />
               <FieldError errors={[errors.forma_pagamento]} />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="carteira_id">Saiu da conta</FieldLabel>
+              <Controller
+                control={form.control}
+                name="carteira_id"
+                render={({ field }) => (
+                  <CarteiraSelect id="carteira_id" carteiras={carteiras} value={field.value} onChange={field.onChange} />
+                )}
+              />
             </Field>
           </FieldGroup>
           <DialogFooter>

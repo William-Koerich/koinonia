@@ -19,9 +19,19 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { recorrenciaSchema, type RecorrenciaInput } from "@/lib/validation/financeiro";
 import { salvarRecorrencia } from "../actions";
-import { CamposConta, CamposTermino } from "../campos-conta";
+import { CamposConta, CamposTermino, type MinisterioOpcao } from "../campos-conta";
 
-export function RecorrenciaDialog({ id, resumo, valores }: { id: string; resumo: string; valores: RecorrenciaInput }) {
+export function RecorrenciaDialog({
+  id,
+  resumo,
+  valores,
+  ministerios,
+}: {
+  id: string;
+  resumo: string;
+  valores: RecorrenciaInput;
+  ministerios: MinisterioOpcao[];
+}) {
   const [aberto, setAberto] = useState(false);
   const { form, pending, onSubmit } = useActionForm({
     schema: recorrenciaSchema,
@@ -54,7 +64,7 @@ export function RecorrenciaDialog({ id, resumo, valores }: { id: string; resumo:
               </DialogDescription>
             </DialogHeader>
             <FieldGroup className="py-4">
-              <CamposConta />
+              <CamposConta ministerios={ministerios} />
               <CamposTermino />
               <Field data-invalid={!!errors.observacao}>
                 <FieldLabel htmlFor="observacao">Observação</FieldLabel>
