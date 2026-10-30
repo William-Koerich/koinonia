@@ -9,6 +9,8 @@ export const CATEGORIAS_ENTRADA = [
   { value: "doacao", label: "Doação" },
   // lançada automaticamente quando a tesouraria confirma o pagamento de uma inscrição
   { value: "evento", label: "Inscrição em evento" },
+  // soma das vendas de cada cantina, mantida pelo banco a partir das vendas registradas pela equipe
+  { value: "cantina", label: "Vendas da cantina" },
   { value: "outra", label: "Outra" },
 ] as const;
 
@@ -22,6 +24,9 @@ export const FORMAS_PAGAMENTO = [
 
 export type CategoriaEntrada = (typeof CATEGORIAS_ENTRADA)[number]["value"];
 export type FormaPagamento = (typeof FORMAS_PAGAMENTO)[number]["value"];
+
+/** Categorias que se lançam à mão (as da cantina entram sozinhas) */
+export const CATEGORIAS_ENTRADA_MANUAL = CATEGORIAS_ENTRADA.filter((c) => c.value !== "cantina");
 
 export const rotuloCategoria = (v: CategoriaEntrada) => CATEGORIAS_ENTRADA.find((c) => c.value === v)?.label ?? v;
 export const rotuloForma = (v: FormaPagamento) => FORMAS_PAGAMENTO.find((f) => f.value === v)?.label ?? v;

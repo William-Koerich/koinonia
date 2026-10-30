@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  CATEGORIAS_ENTRADA,
+  CATEGORIAS_ENTRADA_MANUAL,
   entradaSchema,
   entradaVazia,
   FORMAS_PAGAMENTO,
@@ -95,7 +95,7 @@ export function EntradaDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {CATEGORIAS_ENTRADA.map((c) => (
+                        {CATEGORIAS_ENTRADA_MANUAL.map((c) => (
                           <SelectItem key={c.value} value={c.value}>
                             {c.label}
                           </SelectItem>

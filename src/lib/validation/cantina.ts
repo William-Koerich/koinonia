@@ -33,3 +33,28 @@ export const reservaCantinaSchema = z.object({
 });
 
 export type ReservaCantinaInput = z.input<typeof reservaCantinaSchema>;
+
+export const FORMAS_CANTINA = [
+  { value: "pix", label: "PIX" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "cartao", label: "Cartão" },
+] as const;
+
+export type FormaCantina = (typeof FORMAS_CANTINA)[number]["value"];
+
+/**
+ * Venda registrada pela equipe: no balcão (item + quantidade) ou quitando uma
+ * reserva (o banco copia item e quantidade da reserva). Valor vazio = preço do
+ * item × quantidade.
+ */
+export const vendaCantinaSchema = z.object({
+  item_id: z.uuid({ error: "Escolha o item." }),
+  quantidade: z.number().int().min(1, "Venda pelo menos 1.").max(200, "No máximo 200 por venda."),
+  forma: z.enum(["pix", "dinheiro", "cartao"], { error: "Escolha como foi pago." }),
+  valor: z
+    .string()
+    .transform(lerMoeda)
+    .refine((v) => v === null || v > 0, "Valor inválido."),
+});
+
+export type VendaCantinaInput = z.input<typeof vendaCantinaSchema>;

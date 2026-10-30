@@ -10,7 +10,7 @@ import { MODOS_CANTINA } from "@/lib/validation/cantina";
 import { cancelarReserva, reservar } from "./actions";
 
 type Modo = "levar" | "comer_aqui";
-export type MinhaReserva = { quantidade: number; modo: Modo; observacao: string | null };
+export type MinhaReserva = { quantidade: number; modo: Modo; observacao: string | null; paga: boolean };
 
 const ICONE_MODO = { comer_aqui: UtensilsIcon, levar: HomeIcon };
 
@@ -78,9 +78,11 @@ export function ReservarItem({
           <span>
             Você reservou <strong>{minha.quantidade}</strong> ·{" "}
             <Icone className="inline size-3.5" /> {MODOS_CANTINA.find((m) => m.value === minha.modo)?.label}
+            {minha.paga && <> · <strong>paga</strong></>}
           </span>
         </p>
-        {!encerrado && (
+        {/* reserva paga só muda com a equipe (o valor já entrou no financeiro) */}
+        {!encerrado && !minha.paga && (
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" onClick={() => setEditando(true)} disabled={pending}>
               Alterar

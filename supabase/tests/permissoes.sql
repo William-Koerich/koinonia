@@ -335,6 +335,83 @@ select koinonia_teste_ok(count(*) = 1, 'altera a própria reserva') from u;
 reset role;
 
 \echo
+\echo '== Cantina: vendas e entradas no financeiro'
+select set_config('request.jwt.claims', '', true);
+-- c4: equipe B (o MEMBRO participa), mas passou há mais de 7 dias
+insert into public.koinonia_cantina_escalas (id, data, ministerio_id)
+select '99999999-0000-4000-a000-0000000000c4', current_date - 905, id from public.koinonia_ministerios where nome = 'Teste Ministério B';
+insert into public.koinonia_cantina_itens (id, cantina_id, nome, preco) values
+  ('99999999-0000-4000-a000-0000000001c4', '99999999-0000-4000-a000-0000000000c4', 'Suco Passado', 3);
+select r.id as reserva_admin_c1 from koinonia_cantina_reservas r join koinonia_cantina_itens i on i.id = r.item_id
+  where i.nome = 'Cachorro-quente Teste' and r.profile_id = :'admin_id' \gset
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia(format($$insert into koinonia_cantina_vendas (cantina_id, item_id, reserva_id, quantidade, forma)
+  values ('99999999-0000-4000-a000-0000000000c1', gen_random_uuid(), %L, 1, 'pix')$$, :'reserva_admin_c1'),
+  'item sem preço exige o valor recebido');
+with v as (insert into koinonia_cantina_vendas (cantina_id, item_id, reserva_id, quantidade, valor, forma)
+           values ('99999999-0000-4000-a000-0000000000c1', gen_random_uuid(), :'reserva_admin_c1', 99, 12, 'pix')
+           returning item_id, quantidade)
+select koinonia_teste_ok(count(*) = 1 and bool_and(quantidade = 1), 'equipe registra o pagamento de uma reserva (item e quantidade vêm da reserva)') from v;
+select koinonia_teste_bloqueia($$insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, forma)
+  values ('99999999-0000-4000-a000-0000000000c2', '99999999-0000-4000-a000-0000000001c2', 1, 'pix')$$, 'quem não está na equipe não registra venda');
+select koinonia_teste_bloqueia($$insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, forma)
+  values ('99999999-0000-4000-a000-0000000000c4', '99999999-0000-4000-a000-0000000001c4', 1, 'pix')$$, 'equipe não registra venda passados 7 dias');
+with u as (update koinonia_cantina_vendas set valor = 1 returning 1)
+select koinonia_teste_ok(count(*) = 0, 'venda não se altera') from u;
+reset role;
+
+select koinonia_teste_como('pastor');
+set local role authenticated;
+-- Pastel: 3 disponíveis, 2 reservados (admin e membro)
+select koinonia_teste_bloqueia($$insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, forma)
+  values ('99999999-0000-4000-a000-0000000000c2', '99999999-0000-4000-a000-0000000001c2', 2, 'dinheiro')$$, 'venda no balcão respeita o estoque');
+with v as (insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, forma)
+           values ('99999999-0000-4000-a000-0000000000c2', '99999999-0000-4000-a000-0000000001c2', 1, 'dinheiro') returning valor)
+select koinonia_teste_ok(bool_and(valor = 8), 'venda no balcão usa o preço do item') from v;
+select koinonia_teste_ok((select reservado = 2 and vendido = 1 from koinonia_cantina_disponibilidade('99999999-0000-4000-a000-0000000000c2')
+                          where item_id = '99999999-0000-4000-a000-0000000001c2'),
+  'disponibilidade conta reservas e vendas no balcão');
+insert into koinonia_cantina_vendas (cantina_id, item_id, reserva_id, quantidade, forma)
+select '99999999-0000-4000-a000-0000000000c2', r.item_id, r.id, 1, 'pix' from koinonia_cantina_reservas r
+ where r.item_id = '99999999-0000-4000-a000-0000000001c2' and r.profile_id = current_setting('teste.membro')::uuid;
+insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, forma)
+values ('99999999-0000-4000-a000-0000000000c4', '99999999-0000-4000-a000-0000000001c4', 2, 'cartao');
+select koinonia_teste_ok(
+  (select count(*) = 1 and bool_and(valor = 12 and categoria = 'cantina' and forma_pagamento = 'pix')
+     from koinonia_financeiro_entradas where cantina_id = '99999999-0000-4000-a000-0000000000c1')
+  and (select count(*) = 2 and sum(valor) = 16 from koinonia_financeiro_entradas where cantina_id = '99999999-0000-4000-a000-0000000000c2'),
+  'vendas viram uma entrada por cantina e forma de pagamento');
+select koinonia_teste_ok((select count(*) = 1 from koinonia_cantina_vendas where cantina_id = '99999999-0000-4000-a000-0000000000c4'),
+  'tesouraria registra venda a qualquer momento');
+select koinonia_teste_bloqueia($$update koinonia_financeiro_entradas set valor = 1 where cantina_id = '99999999-0000-4000-a000-0000000000c2'$$,
+  'valor da entrada da cantina só muda pelas vendas');
+select koinonia_teste_bloqueia($$delete from koinonia_financeiro_entradas where cantina_id = '99999999-0000-4000-a000-0000000000c2'$$,
+  'entrada da cantina não é excluída à mão');
+select koinonia_teste_bloqueia($$insert into koinonia_financeiro_entradas (data, categoria, valor, forma_pagamento) values (current_date, 'cantina', 10, 'pix')$$,
+  'entrada de cantina não é lançada à mão');
+with u as (update koinonia_financeiro_entradas set descricao = 'Cantina ajustada' where cantina_id = '99999999-0000-4000-a000-0000000000c2' returning 1)
+select koinonia_teste_ok(count(*) = 2, 'descrição da entrada da cantina pode ser ajustada') from u;
+select koinonia_teste_bloqueia($$delete from koinonia_cantina_itens where id = '99999999-0000-4000-a000-0000000001c2'$$,
+  'item com vendas não é excluído');
+delete from koinonia_cantina_vendas where cantina_id = '99999999-0000-4000-a000-0000000000c2' and forma = 'dinheiro';
+select koinonia_teste_ok((select count(*) = 1 and bool_and(forma_pagamento = 'pix')
+                            from koinonia_financeiro_entradas where cantina_id = '99999999-0000-4000-a000-0000000000c2'),
+  'desfazer a venda tira o valor da entrada');
+reset role;
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia($$update koinonia_cantina_reservas set quantidade = 2 where item_id = '99999999-0000-4000-a000-0000000001c2' and profile_id = auth.uid()$$,
+  'reserva paga não muda de quantidade');
+select koinonia_teste_bloqueia($$delete from koinonia_cantina_reservas where item_id = '99999999-0000-4000-a000-0000000001c2' and profile_id = auth.uid()$$,
+  'reserva paga não é cancelada');
+select koinonia_teste_ok((select count(*) = 1 from koinonia_cantina_vendas where cantina_id = '99999999-0000-4000-a000-0000000000c2'),
+  'quem reservou vê só o próprio pagamento (fora da equipe)');
+reset role;
+
+\echo
 \echo '== Avisos'
 select set_config('request.jwt.claims', '', true);
 -- a1: público e vigente; a2: só membros; a3: público, mas já venceu
@@ -926,6 +1003,13 @@ select koinonia_evento_confirmar_pagamento(current_setting('teste.insc_pago')::u
 select koinonia_teste_ok((select carteira_id = '99999999-0000-4000-a000-0000000000f1' from koinonia_financeiro_entradas
                            where inscricao_id = current_setting('teste.insc_pago')::uuid),
   'pagamento de inscrição em dinheiro entra no caixa');
+
+-- venda da cantina em dinheiro cai no caixa; PIX, na conta principal
+insert into koinonia_cantina_vendas (cantina_id, item_id, quantidade, valor, forma)
+select '99999999-0000-4000-a000-0000000000c1', id, 1, 5, 'dinheiro' from koinonia_cantina_itens where nome = 'Cachorro-quente Teste';
+select koinonia_teste_ok((select carteira_id = '99999999-0000-4000-a000-0000000000f1' from koinonia_financeiro_entradas
+                           where cantina_id = '99999999-0000-4000-a000-0000000000c1' and forma_pagamento = 'dinheiro'),
+  'venda da cantina em dinheiro entra no caixa');
 reset role;
 
 \echo

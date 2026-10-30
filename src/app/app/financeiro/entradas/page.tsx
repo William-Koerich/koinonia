@@ -1,9 +1,11 @@
-import { WalletIcon } from "lucide-react";
+import { CoffeeIcon, WalletIcon } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { ConfirmarExclusao } from "@/components/app/confirmar-exclusao";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader } from "@/components/app/page-header";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
@@ -54,7 +56,7 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
     supabase
       .from("koinonia_financeiro_entradas")
       .select(
-        "id, data, categoria, valor, forma_pagamento, profile_id, contribuinte_nome, descricao, carteira_id, pessoa:koinonia_profiles!koinonia_financeiro_entradas_profile_id_fkey(nome_completo)",
+        "id, data, categoria, valor, forma_pagamento, profile_id, contribuinte_nome, descricao, carteira_id, cantina_id, pessoa:koinonia_profiles!koinonia_financeiro_entradas_profile_id_fkey(nome_completo)",
       )
       .gte("data", `${mes}-01`)
       .lt("data", `${somarMes(mes, 1)}-01`)
@@ -155,31 +157,42 @@ async function Entradas({ searchParams }: Pick<PageProps<"/app/financeiro/entrad
                           descricao={`${rotuloCategoria(e.categoria)} de ${formatarMoeda(Number(e.valor))} em ${formatarData(e.data)}`}
                         />
                         <LinkHistorico registroId={e.id} />
-                        <EntradaDialog
-                          pessoas={pessoas}
-                          carteiras={carteiras}
-                          hoje={dataPadrao}
-                          entrada={{
-                            id: e.id,
-                            valores: {
-                              data: e.data,
-                              categoria: e.categoria,
-                              valor: formatarMoedaInput(Number(e.valor).toFixed(2)),
-                              forma_pagamento: e.forma_pagamento,
-                              contribuinte: e.profile_id ? "membro" : e.contribuinte_nome ? "outro" : "nenhum",
-                              profile_id: e.profile_id ?? "",
-                              contribuinte_nome: e.contribuinte_nome ?? "",
-                              descricao: e.descricao ?? "",
-                              carteira_id: e.carteira_id,
-                            },
-                          }}
-                        />
-                        <ConfirmarExclusao
-                          somenteIcone
-                          titulo="Excluir esta entrada?"
-                          descricao={`${rotuloCategoria(e.categoria)} de ${formatarMoeda(Number(e.valor))} em ${formatarData(e.data)}.`}
-                          acao={excluirEntrada.bind(null, e.id)}
-                        />
+                        {e.cantina_id ? (
+                          // soma das vendas da cantina: muda só pelas vendas, na página da cantina
+                          <Button asChild variant="ghost" size="icon" aria-label="Ver vendas da cantina">
+                            <Link href={`/app/cantina/${e.cantina_id}`}>
+                              <CoffeeIcon />
+                            </Link>
+                          </Button>
+                        ) : (
+                          <>
+                            <EntradaDialog
+                              pessoas={pessoas}
+                              carteiras={carteiras}
+                              hoje={dataPadrao}
+                              entrada={{
+                                id: e.id,
+                                valores: {
+                                  data: e.data,
+                                  categoria: e.categoria as Exclude<CategoriaEntrada, "cantina">,
+                                  valor: formatarMoedaInput(Number(e.valor).toFixed(2)),
+                                  forma_pagamento: e.forma_pagamento,
+                                  contribuinte: e.profile_id ? "membro" : e.contribuinte_nome ? "outro" : "nenhum",
+                                  profile_id: e.profile_id ?? "",
+                                  contribuinte_nome: e.contribuinte_nome ?? "",
+                                  descricao: e.descricao ?? "",
+                                  carteira_id: e.carteira_id,
+                                },
+                              }}
+                            />
+                            <ConfirmarExclusao
+                              somenteIcone
+                              titulo="Excluir esta entrada?"
+                              descricao={`${rotuloCategoria(e.categoria)} de ${formatarMoeda(Number(e.valor))} em ${formatarData(e.data)}.`}
+                              acao={excluirEntrada.bind(null, e.id)}
+                            />
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
