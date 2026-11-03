@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDaysIcon, ClipboardListIcon, MegaphoneIcon } from "lucide-react";
+import { CalendarDaysIcon, ClipboardListIcon, MegaphoneIcon, UserRoundPlusIcon } from "lucide-react";
 import { type Control, Controller, useWatch } from "react-hook-form";
 import type { z } from "zod";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -21,7 +21,7 @@ import { salvarConfigNotificacoes } from "../actions";
 
 type ConfigNotificacaoSaida = z.output<typeof configNotificacaoSchema>;
 
-type NomeInterruptor = "escala_ativo" | "aviso_ativo" | "evento_ao_cadastrar" | "evento_na_hora";
+type NomeInterruptor = "escala_ativo" | "aviso_ativo" | "evento_ao_cadastrar" | "evento_na_hora" | "visitantes_resumo_ativo";
 
 function Interruptor({
   control,
@@ -60,9 +60,9 @@ export function RegrasForm({ valores }: { valores: ConfigNotificacaoInput }) {
     action: salvarConfigNotificacoes,
   });
   const { errors } = form.formState;
-  const [escalaAtivo, eventoNaHora, diasEvento] = useWatch({
+  const [escalaAtivo, eventoNaHora, diasEvento, resumoVisitantes] = useWatch({
     control: form.control,
-    name: ["escala_ativo", "evento_na_hora", "evento_dias_antes"],
+    name: ["escala_ativo", "evento_na_hora", "evento_dias_antes", "visitantes_resumo_ativo"],
   });
 
   return (
@@ -110,6 +110,32 @@ export function RegrasForm({ valores }: { valores: ConfigNotificacaoInput }) {
         </CardHeader>
         <CardContent>
           <Interruptor control={form.control} nome="aviso_ativo" rotulo="Notificar ao publicar um aviso" />
+        </CardContent>
+      </Card>
+
+      {/* visitantes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserRoundPlusIcon className="size-5 text-primary" /> Visitantes
+          </CardTitle>
+          <CardDescription>
+            Pastores e administradores recebem um resumo do dia, como “3 visitantes no culto de hoje”. Só nos dias com
+            visitante cadastrado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Interruptor control={form.control} nome="visitantes_resumo_ativo" rotulo="Enviar o resumo de visitantes do dia" />
+            {resumoVisitantes && (
+              <Field data-invalid={!!errors.visitantes_resumo_horario}>
+                <FieldLabel htmlFor="visitantes_resumo_horario">Horário do resumo</FieldLabel>
+                <Input id="visitantes_resumo_horario" type="time" className="w-32" {...form.register("visitantes_resumo_horario")} />
+                <FieldDescription>Depois do último culto do dia, para contar todos os visitantes.</FieldDescription>
+                <FieldError errors={[errors.visitantes_resumo_horario]} />
+              </Field>
+            )}
+          </FieldGroup>
         </CardContent>
       </Card>
 

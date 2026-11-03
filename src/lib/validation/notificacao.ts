@@ -20,7 +20,7 @@ export const PUBLICOS_NOTIFICACAO = [
   { value: "gc", label: "Um GC" },
 ] as const;
 
-export const ORIGENS = { manual: "Manual", aviso: "Aviso", evento: "Evento", escala: "Escala" } as const;
+export const ORIGENS = { manual: "Manual", aviso: "Aviso", evento: "Evento", escala: "Escala", visitante: "Visitantes" } as const;
 
 export const notificacaoSchema = z
   .object({
@@ -90,6 +90,8 @@ export const configNotificacaoSchema = z.object({
   evento_horario: horario,
   evento_na_hora: z.boolean(),
   evento_minutos_antes: z.enum(["0", "15", "30", "60", "120"]).transform(Number),
+  visitantes_resumo_ativo: z.boolean(),
+  visitantes_resumo_horario: horario,
 });
 
 export type ConfigNotificacaoInput = z.input<typeof configNotificacaoSchema>;

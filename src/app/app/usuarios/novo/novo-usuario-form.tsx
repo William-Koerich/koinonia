@@ -10,25 +10,35 @@ import { useActionForm } from "@/components/forms/use-action-form";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { formatarCelular } from "@/lib/format";
 import { novoUsuarioSchema } from "@/lib/validation/usuario";
 import { criarUsuario } from "../actions";
 import { PapelSelect } from "../papel-select";
 
-export function NovoUsuarioForm({ gcs, podeDefinirPapel }: { gcs: GcOpcao[]; podeDefinirPapel: boolean }) {
+export function NovoUsuarioForm({
+  gcs,
+  podeDefinirPapel,
+  visitante,
+}: {
+  gcs: GcOpcao[];
+  podeDefinirPapel: boolean;
+  /** "Tornar membro": dados do visitante que viram o começo do cadastro */
+  visitante?: { id: string; nome: string; celular: string };
+}) {
   const router = useRouter();
   const { form, pending, onSubmit } = useActionForm({
     schema: novoUsuarioSchema,
     defaultValues: {
-      nome_completo: "",
-      celular: "",
+      nome_completo: visitante?.nome ?? "",
+      celular: visitante ? formatarCelular(visitante.celular) : "",
       data_nascimento: "",
       email: "",
       senha: "",
       gc_id: null,
       role: "MEMBRO",
     },
-    action: criarUsuario,
-    onSuccess: () => router.push("/app/usuarios"),
+    action: (v) => criarUsuario(v, visitante?.id),
+    onSuccess: () => router.push(visitante ? `/app/visitantes/${visitante.id}` : "/app/usuarios"),
   });
   const { errors } = form.formState;
 

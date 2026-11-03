@@ -32,6 +32,8 @@ export default async function RegrasPage() {
           evento_horario: c.evento_horario.slice(0, 5),
           evento_na_hora: c.evento_na_hora,
           evento_minutos_antes: String(c.evento_minutos_antes) as "0" | "15" | "30" | "60" | "120",
+          visitantes_resumo_ativo: c.visitantes_resumo_ativo,
+          visitantes_resumo_horario: c.visitantes_resumo_horario.slice(0, 5),
         }}
       />
     </div>

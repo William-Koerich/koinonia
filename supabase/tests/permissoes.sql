@@ -595,6 +595,8 @@ with u as (update koinonia_visitantes set motivo = 'Editado pela porta' where no
 select koinonia_teste_ok(count(*) = 0, 'porta não edita visitante cadastrado por outra pessoa') from u;
 with u as (update koinonia_visitantes set motivo = 'Primeira vez' where nome = 'Visitante da Porta' returning 1)
 select koinonia_teste_ok(count(*) = 1, 'porta corrige o que ela mesma cadastrou') from u;
+select koinonia_teste_bloqueia($$update koinonia_visitantes set responsavel_id = auth.uid() where nome = 'Visitante da Porta'$$,
+  'porta não define o responsável pelo acompanhamento');
 reset role;
 -- a mesma escala, mas amanhã: sem acesso hoje
 select set_config('request.jwt.claims', '', true);
@@ -604,6 +606,53 @@ set local role authenticated;
 select koinonia_teste_ok(not koinonia_na_porta_hoje() and (select count(*) from koinonia_visitantes) = 0,
   'fora do dia da escala, a porta não vê nem cadastra visitantes');
 reset role;
+
+\echo
+\echo '== Visitantes: acompanhamento e resumo diário'
+select koinonia_teste_como('pastor');
+set local role authenticated;
+with u as (update koinonia_visitantes set responsavel_id = current_setting('teste.membro')::uuid where nome = 'Visitante Teste' returning 1)
+select koinonia_teste_ok(count(*) = 1, 'pastor define o responsável pelo acompanhamento') from u;
+reset role;
+select koinonia_teste_ok((select count(*) from koinonia_notificacoes where publico = 'perfil' and publico_id = :'membro_id'
+                           and titulo = 'Acompanhar visitante' and created_at = now()) = 1,
+  'responsável é avisado de que vai acompanhar o visitante');
+
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) = 1 and bool_and(nome = 'Visitante Teste') from koinonia_visitantes),
+  'responsável vê só os visitantes que acompanha');
+select koinonia_visitante_registrar_contato(id, current_date, 'whatsapp', 'Mandei mensagem, respondeu feliz', 'em_contato')
+  from koinonia_visitantes where nome = 'Visitante Teste';
+select koinonia_teste_ok((select situacao = 'em_contato' from koinonia_visitantes where nome = 'Visitante Teste')
+                         and (select count(*) from koinonia_visitante_contatos) = 1,
+  'responsável registra o contato e muda a situação');
+with u as (update koinonia_visitantes set situacao = 'frequentando' returning 1)
+select koinonia_teste_ok(count(*) = 0, 'responsável não edita o cadastro direto') from u;
+select koinonia_teste_bloqueia($$select koinonia_visitante_registrar_contato(id, current_date + 1, 'ligacao', 'Amanhã', 'em_contato')
+  from koinonia_visitantes where nome = 'Visitante Teste'$$, 'contato não fica no futuro');
+select koinonia_teste_bloqueia($$select koinonia_visitante_registrar_contato(id, current_date, 'ligacao', 'Virou membro', 'membro')
+  from koinonia_visitantes where nome = 'Visitante Teste'$$, 'situação membro só pelo cadastro do usuário');
+select koinonia_teste_bloqueia($$insert into koinonia_visitante_contatos (visitante_id, meio, resultado)
+  select id, 'outro', 'Direto' from koinonia_visitantes$$, 'contato só pela função de registro');
+reset role;
+select id as visitante_porta from koinonia_visitantes where nome = 'Visitante da Porta' \gset
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia(format($$select koinonia_visitante_registrar_contato(%L, current_date, 'ligacao', 'Intruso', 'em_contato')$$,
+  :'visitante_porta'), 'não registra contato de visitante que não acompanha');
+reset role;
+
+-- resumo: horário de agora (fuso de SP) para disparar no teste
+select set_config('request.jwt.claims', '', true);
+update koinonia_notificacao_config set visitantes_resumo_ativo = true,
+  visitantes_resumo_horario = date_trunc('minute', (now() at time zone 'America/Sao_Paulo')::time);
+select koinonia_teste_ok(koinonia_visitantes_gerar_resumo() = (select count(*) from koinonia_profiles where ativo and role in ('ADMIN', 'PASTOR')),
+  'resumo de visitantes vai para cada pastor e administrador');
+select koinonia_teste_ok((select titulo like '% visitantes no culto de hoje' from koinonia_notificacoes
+                           where chave = format('visitantes:%s:%s', (now() at time zone 'America/Sao_Paulo')::date, :'pastor_id')),
+  'resumo diz quantos visitantes vieram hoje');
+select koinonia_teste_ok(koinonia_visitantes_gerar_resumo() = 0, 'resumo sai uma vez por dia');
 
 \echo
 \echo '== Usuário INATIVO'

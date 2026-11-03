@@ -28,11 +28,18 @@ export async function dispararPendentes(): Promise<ResultadoDisparo> {
   if (!configurar()) return { geradas: 0, enviadas: 0, notificacoes: 0, erro: "Chaves VAPID não configuradas." };
 
   const supabase = createAdminClient();
-  const { data: geradas, error: erroGerar } = await supabase.rpc("koinonia_notificacoes_gerar_automaticas");
-  if (erroGerar) return { geradas: 0, enviadas: 0, notificacoes: 0, erro: erroGerar.message };
+  const [{ data: lembretes, error: erroGerar }, { data: resumos, error: erroResumo }] = await Promise.all([
+    supabase.rpc("koinonia_notificacoes_gerar_automaticas"),
+    // "3 visitantes no culto de hoje", para pastores e administradores
+    supabase.rpc("koinonia_visitantes_gerar_resumo"),
+  ]);
+  if (erroGerar || erroResumo) {
+    return { geradas: 0, enviadas: 0, notificacoes: 0, erro: (erroGerar ?? erroResumo)!.message };
+  }
+  const geradas = (lembretes ?? 0) + (resumos ?? 0);
 
   const { data: fila, error: erroFila } = await supabase.rpc("koinonia_notificacoes_reservar", { p_limite: 50 });
-  if (erroFila) return { geradas: geradas ?? 0, enviadas: 0, notificacoes: 0, erro: erroFila.message };
+  if (erroFila) return { geradas, enviadas: 0, notificacoes: 0, erro: erroFila.message };
 
   let totalEnviadas = 0;
   for (const n of fila ?? []) {
@@ -65,7 +72,7 @@ export async function dispararPendentes(): Promise<ResultadoDisparo> {
       .eq("id", n.id);
   }
 
-  return { geradas: geradas ?? 0, enviadas: totalEnviadas, notificacoes: fila?.length ?? 0 };
+  return { geradas, enviadas: totalEnviadas, notificacoes: fila?.length ?? 0 };
 }
 
 /** Notificação de teste para os aparelhos de uma pessoa (botão "Enviar teste") */

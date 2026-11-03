@@ -22,7 +22,7 @@ import {
  * O auth.users é compartilhado com outros apps: se o e-mail já tiver login,
  * apenas vinculamos o perfil Koinonia à conta existente (a senha dela não muda).
  */
-export async function criarUsuario(input: NovoUsuarioInput): Promise<ActionResult> {
+export async function criarUsuario(input: NovoUsuarioInput, visitanteId?: string): Promise<ActionResult> {
   const editor = await autorizar("ADMIN", "PASTOR");
   if (!editor) return { ok: false, error: SEM_PERMISSAO };
 
@@ -72,12 +72,25 @@ export async function criarUsuario(input: NovoUsuarioInput): Promise<ActionResul
     return { ok: false, error: mensagemErroBanco(erroPerfil) };
   }
 
+  // "Tornar membro": liga o visitante ao perfil novo (com a sessão de quem cadastrou, pela RLS)
+  let avisoVisitante = "";
+  if (visitanteId) {
+    const supabase = await createClient();
+    const { error: erroVisitante } = await supabase
+      .from("koinonia_visitantes")
+      .update({ profile_id: userId, situacao: "membro" })
+      .eq("id", visitanteId);
+    if (erroVisitante) avisoVisitante = " Não foi possível marcar o visitante como membro: ajuste no cadastro dele.";
+    revalidatePath("/app/visitantes");
+    revalidatePath(`/app/visitantes/${visitanteId}`);
+  }
+
   revalidatePath("/app/usuarios");
   return {
     ok: true,
-    message: contaCriada
+    message: (contaCriada
       ? "Usuário criado. Passe o e-mail e a senha inicial para a pessoa."
-      : "Este e-mail já tinha login em outro sistema: o acesso foi liberado e a senha atual dele foi mantida.",
+      : "Este e-mail já tinha login em outro sistema: o acesso foi liberado e a senha atual dele foi mantida.") + avisoVisitante,
   };
 }
 

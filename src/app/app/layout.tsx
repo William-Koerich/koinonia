@@ -24,8 +24,8 @@ export default function AppLayout({ children }: LayoutProps<"/app">) {
 
 async function AppShell({ children }: { children: React.ReactNode }) {
   const profile = await requireProfile();
-  // o menu de Visitantes abre para quem está na Porta Principal no dia
-  const liberados = (await acessoVisitantes(profile)) === "porta" ? ["/app/visitantes"] : [];
+  // o menu de Visitantes abre para quem está na Porta Principal no dia e para quem acompanha algum visitante
+  const liberados = (await acessoVisitantes(profile)) ? ["/app/visitantes"] : [];
 
   return (
     <SidebarProvider>
