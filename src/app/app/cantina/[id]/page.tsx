@@ -172,7 +172,7 @@ const ROTULO_FORMA = Object.fromEntries(FORMAS_CANTINA.map((f) => [f.value, f.la
  */
 async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; itens: ItemVenda[]; podeVender: boolean }) {
   const supabase = await createClient();
-  const [{ data: reservas, error }, { data: vendas, error: erroVendas }] = await Promise.all([
+  const [{ data: reservas, error }, { data: vendas, error: erroVendas }, { data: visitantes }] = await Promise.all([
     supabase
       .from("koinonia_cantina_reservas")
       .select(
@@ -187,6 +187,8 @@ async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; i
       .select("id, item_id, reserva_id, quantidade, valor, forma, created_at")
       .eq("cantina_id", cantinaId)
       .order("created_at", { ascending: false }),
+    // visitantes cadastrados na data da cantina (só o nome), para a equipe saber que tem visitante
+    supabase.rpc("koinonia_cantina_visitantes", { p_cantina_id: cantinaId }),
   ]);
   if (error) throw new Error(error.message);
   if (erroVendas) throw new Error(erroVendas.message);
@@ -288,8 +290,16 @@ async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; i
       </div>
 
       <div className="space-y-4">
-        <h2 className="font-heading text-xl font-semibold">Reservas</h2>
-        {ordenadas.length === 0 ? (
+        <div>
+          <h2 className="font-heading text-xl font-semibold">Reservas</h2>
+          {!!visitantes?.length && (
+            <p className="text-sm text-muted-foreground">
+              {visitantes.length === 1 ? "1 visitante cadastrado" : `${visitantes.length} visitantes cadastrados`} neste dia
+              aparecem no fim da lista.
+            </p>
+          )}
+        </div>
+        {ordenadas.length === 0 && !visitantes?.length ? (
           <EmptyState icone={UtensilsCrossedIcon} titulo="Nenhuma reserva ainda" />
         ) : (
           <div className="overflow-x-auto rounded-xl border">
@@ -364,6 +374,16 @@ async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; i
                     </TableRow>
                   );
                 })}
+                {visitantes?.map((v) => (
+                  <TableRow key={v.id} className="bg-amber-500/5">
+                    <TableCell className="align-top">
+                      <p className="font-medium">{v.nome} (visitante)</p>
+                    </TableCell>
+                    <TableCell colSpan={5} className="align-top text-sm text-muted-foreground">
+                      Visitou a igreja neste dia: receba com carinho.
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

@@ -1545,6 +1545,11 @@ isOneToOne: false
 "koinonia_cantina_pode_vender":
 { Args: { "p_cantina_id": string }; Returns: boolean
                            },
+"koinonia_cantina_visitantes":
+{ Args: { "p_cantina_id": string }; Returns: {
+              "created_at": string,"id": string,"nome": string
+            }[]
+                           },
 "koinonia_current_user_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["koinonia_user_role"]
                            },

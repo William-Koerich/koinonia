@@ -654,6 +654,17 @@ select koinonia_teste_ok((select titulo like '% visitantes no culto de hoje' fro
   'resumo diz quantos visitantes vieram hoje');
 select koinonia_teste_ok(koinonia_visitantes_gerar_resumo() = 0, 'resumo sai uma vez por dia');
 
+-- visitante na data da cantina c1 (equipe B, o MEMBRO participa); c2 é da equipe C
+insert into koinonia_visitantes (nome, celular, data_visita) values
+  ('Visitante Cantina', '47977776666', current_date + 900), ('Visitante Outra Cantina', '47977775555', current_date + 901);
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_ok((select count(*) = 1 and bool_and(nome = 'Visitante Cantina') from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c1')),
+  'equipe da cantina vê os visitantes daquela data (só o nome)');
+select koinonia_teste_ok((select count(*) from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c2')) = 0,
+  'quem não está na equipe não vê os visitantes pela cantina');
+reset role;
+
 \echo
 \echo '== Usuário INATIVO'
 select set_config('request.jwt.claims', '', true); -- comandos de preparação rodam como sistema
