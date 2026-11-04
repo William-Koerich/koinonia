@@ -663,6 +663,23 @@ select koinonia_teste_ok((select count(*) = 1 and bool_and(nome = 'Visitante Can
   'equipe da cantina vê os visitantes daquela data (só o nome)');
 select koinonia_teste_ok((select count(*) from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c2')) = 0,
   'quem não está na equipe não vê os visitantes pela cantina');
+select koinonia_cantina_confirmar_visitante('99999999-0000-4000-a000-0000000000c1',
+  (select id from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c1') limit 1), true);
+select koinonia_teste_ok((select bool_and(confirmado) from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c1')),
+  'equipe marca que o visitante pegou a cantina');
+select koinonia_cantina_confirmar_visitante('99999999-0000-4000-a000-0000000000c1',
+  (select id from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c1') limit 1), false);
+select koinonia_teste_ok((select not bool_or(confirmado) from koinonia_cantina_visitantes('99999999-0000-4000-a000-0000000000c1')),
+  'equipe desfaz a marcação');
+reset role;
+select id as visitante_outra_cantina from koinonia_visitantes where nome = 'Visitante Outra Cantina' \gset
+select koinonia_teste_como('membro');
+set local role authenticated;
+select koinonia_teste_bloqueia(format($$select koinonia_cantina_confirmar_visitante('99999999-0000-4000-a000-0000000000c2', %L, true)$$,
+  :'visitante_outra_cantina'), 'quem não está na equipe não marca visitante');
+select koinonia_teste_bloqueia(format($$select koinonia_cantina_confirmar_visitante('99999999-0000-4000-a000-0000000000c1', %L, true)$$,
+  :'visitante_outra_cantina'), 'não marca visitante de outro dia');
+select koinonia_teste_bloqueia('select * from koinonia_cantina_visitantes_confirmados', 'confirmações só pelas funções');
 reset role;
 
 \echo
@@ -685,7 +702,9 @@ update public.koinonia_profiles set ativo = true where id = :'membro_id';
 \echo '== PASTOR'
 select koinonia_teste_como('pastor');
 set local role authenticated;
-select koinonia_teste_ok((select count(*) from koinonia_profiles) = (select count(*) from koinonia_perfis_basicos), 'vê todos os perfis');
+-- perfis_basicos só lista os ativos; o pastor vê também os inativos
+select koinonia_teste_ok((select count(*) from koinonia_profiles)
+  = (select count(*) from koinonia_perfis_basicos) + (select count(*) from koinonia_profiles where not ativo), 'vê todos os perfis');
 with u as (update koinonia_profiles set celular = '11911111111' where id = current_setting('teste.membro')::uuid returning 1)
 select koinonia_teste_ok(count(*) = 1, 'edita dados de um membro') from u;
 select koinonia_teste_bloqueia(format('update koinonia_profiles set role = ''PASTOR'' where id = %L', current_setting('teste.membro')), 'não altera papéis');

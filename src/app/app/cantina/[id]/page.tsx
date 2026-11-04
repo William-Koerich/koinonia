@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { FORMAS_CANTINA, type FormaCantina } from "@/lib/validation/cantina";
 import { desfazerVenda, excluirItem, removerReserva } from "./actions";
+import { ConfirmarVisitante } from "./confirmar-visitante";
 import { ItemDialog } from "./item-dialog";
 import { ReceberDialog, type ItemVenda } from "./receber-dialog";
 import { ReservarItem } from "./reservar-item";
@@ -295,7 +296,8 @@ async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; i
           {!!visitantes?.length && (
             <p className="text-sm text-muted-foreground">
               {visitantes.length === 1 ? "1 visitante cadastrado" : `${visitantes.length} visitantes cadastrados`} neste dia
-              aparecem no fim da lista.
+              aparecem no fim da lista ({visitantes.filter((v) => v.confirmado).length} pegaram a cantina). Marque quem pegou:
+              nem todo visitante fica.
             </p>
           )}
         </div>
@@ -379,8 +381,11 @@ async function Reservas({ cantinaId, itens, podeVender }: { cantinaId: string; i
                     <TableCell className="align-top">
                       <p className="font-medium">{v.nome} (visitante)</p>
                     </TableCell>
-                    <TableCell colSpan={5} className="align-top text-sm text-muted-foreground">
+                    <TableCell colSpan={3} className="align-top text-sm text-muted-foreground">
                       Visitou a igreja neste dia: receba com carinho.
+                    </TableCell>
+                    <TableCell colSpan={2} className="align-top">
+                      <ConfirmarVisitante cantinaId={cantinaId} visitanteId={v.id} confirmado={v.confirmado} />
                     </TableCell>
                   </TableRow>
                 ))}

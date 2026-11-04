@@ -379,6 +379,44 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"koinonia_cantina_visitantes_confirmados": {
+                  Row: {
+                    "cantina_id": string,"confirmado_por": string | null,"created_at": string,"visitante_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cantina_id": string,"confirmado_por"?: string | null,"created_at"?: string,"visitante_id": string
+                  }
+                  Update: {
+                    "cantina_id"?: string,"confirmado_por"?: string | null,"created_at"?: string,"visitante_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "koinonia_cantina_visitantes_confirmados_cantina_id_fkey"
+      columns: ["cantina_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_cantina_escalas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_cantina_visitantes_confirmados_confirmado_por_fkey"
+      columns: ["confirmado_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_perfis_basicos"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_cantina_visitantes_confirmados_confirmado_por_fkey"
+      columns: ["confirmado_por"]
+isOneToOne: false
+      referencedRelation: "koinonia_profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "koinonia_cantina_visitantes_confirmados_visitante_id_fkey"
+      columns: ["visitante_id"]
+isOneToOne: false
+      referencedRelation: "koinonia_visitantes"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"koinonia_configuracoes_contribuicao": {
                   Row: {
                     "agencia": string | null,"banco": string | null,"chave_pix": string | null,"cnpj": string | null,"conta": string | null,"id": boolean,"pix_cidade": string | null,"pix_recebedor": string | null,"tipo_chave": Database["public"]['Enums']["koinonia_tipo_chave_pix"] | null,"titular": string | null,"updated_at": string
@@ -1531,6 +1569,9 @@ isOneToOne: false
 "koinonia_aviso_vigente":
 { Args: { "p_exibir_ate": string }; Returns: boolean
                            },
+"koinonia_cantina_confirmar_visitante":
+{ Args: { "p_cantina_id": string,"p_confirmado": boolean,"p_visitante_id": string }; Returns: undefined
+                           },
 "koinonia_cantina_disponibilidade":
 { Args: { "p_cantina_id": string }; Returns: {
               "item_id": string,"reservado": number,"vendido": number
@@ -1547,7 +1588,7 @@ isOneToOne: false
                            },
 "koinonia_cantina_visitantes":
 { Args: { "p_cantina_id": string }; Returns: {
-              "created_at": string,"id": string,"nome": string
+              "confirmado": boolean,"created_at": string,"id": string,"nome": string
             }[]
                            },
 "koinonia_current_user_role":

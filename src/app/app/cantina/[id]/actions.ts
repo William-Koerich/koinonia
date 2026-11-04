@@ -163,6 +163,24 @@ export async function pagarReserva(
   return { ok: true, message: "Pagamento registrado e lançado no financeiro." };
 }
 
+// ------------------------------------------------------------ visitantes do dia (equipe)
+
+/** Marca (ou desmarca) que o visitante pegou a cantina; não mexe no estoque nem no financeiro */
+export async function confirmarVisitante(cantinaId: string, visitanteId: string, confirmado: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("koinonia_cantina_confirmar_visitante", {
+    p_cantina_id: cantinaId,
+    p_visitante_id: visitanteId,
+    p_confirmado: confirmado,
+  });
+  if (error) return { ok: false, error: mensagemErroBanco(error) };
+
+  revalidar(cantinaId);
+  return { ok: true, message: confirmado ? "Visitante marcado: pegou a cantina." : "Marcação desfeita." };
+}
+
+// ------------------------------------------------------------ vendas (equipe e tesouraria)
+
 /** Desfaz uma venda (ou o pagamento de uma reserva); o valor sai da entrada do financeiro */
 export async function desfazerVenda(cantinaId: string, vendaId: string): Promise<ActionResult> {
   const supabase = await createClient();
