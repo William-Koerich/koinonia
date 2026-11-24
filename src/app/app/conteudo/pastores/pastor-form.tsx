@@ -10,7 +10,8 @@ import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLab
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { pastorSchema, type PastorInput } from "@/lib/validation/conteudo";
+import { cn } from "@/lib/utils";
+import { BIO_PASTOR_MAX, pastorSchema, type PastorInput } from "@/lib/validation/conteudo";
 import { salvarPastor } from "../actions";
 
 export function PastorForm({ id, valores }: { id?: string; valores: PastorInput }) {
@@ -20,6 +21,7 @@ export function PastorForm({ id, valores }: { id?: string; valores: PastorInput 
     action: (v) => salvarPastor(id ?? null, v),
   });
   const { errors } = form.formState;
+  const bio = form.watch("bio") ?? "";
 
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -49,7 +51,14 @@ export function PastorForm({ id, valores }: { id?: string; valores: PastorInput 
 
         <Field data-invalid={!!errors.bio}>
           <FieldLabel htmlFor="bio">Bio curta</FieldLabel>
-          <Textarea id="bio" rows={4} {...form.register("bio")} />
+          <Textarea id="bio" rows={4} aria-invalid={!!errors.bio} aria-describedby="bio-contador" {...form.register("bio")} />
+          <FieldDescription
+            id="bio-contador"
+            aria-live="polite"
+            className={cn("text-right tabular-nums", bio.length > BIO_PASTOR_MAX && "text-destructive")}
+          >
+            {bio.length}/{BIO_PASTOR_MAX} caracteres
+          </FieldDescription>
           <FieldError errors={[errors.bio]} />
         </Field>
 

@@ -12,10 +12,12 @@ const caminhoImagem = z
   .nullable()
   .transform((v) => v || null);
 
+export const BIO_PASTOR_MAX = 1000;
+
 export const pastorSchema = z.object({
   nome: textoObrigatorio("o nome"),
   cargo: textoObrigatorio("o cargo", 100),
-  bio: textoOpcional(1000),
+  bio: textoOpcional(BIO_PASTOR_MAX),
   foto_path: caminhoImagem,
   ordem: ordemSchema,
   ativo: z.boolean(),
