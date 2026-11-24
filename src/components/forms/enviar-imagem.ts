@@ -3,7 +3,7 @@
 import { IMAGEM_TAMANHO_MAX, IMAGEM_TIPOS, STORAGE_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 
-export type PastaImagem = "pastores" | "projetos" | "avisos";
+export type PastaImagem = "pastores" | "projetos" | "avisos" | "eventos";
 
 /**
  * Envia uma imagem direto do navegador para o bucket público (a policy do

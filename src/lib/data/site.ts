@@ -28,6 +28,7 @@ export type EventoPublico = Pick<
   | "bairro"
   | "cidade"
   | "uf"
+  | "imagem_path"
 >;
 
 export async function getProximosEventos(limite?: number): Promise<EventoPublico[]> {
@@ -37,7 +38,7 @@ export async function getProximosEventos(limite?: number): Promise<EventoPublico
 
   let query = createPublicClient()
     .from("koinonia_eventos")
-    .select("id, titulo, descricao, inicio, fim, valor, publico, logradouro, numero, complemento, bairro, cidade, uf")
+    .select("id, titulo, descricao, inicio, fim, valor, publico, logradouro, numero, complemento, bairro, cidade, uf, imagem_path")
     .gte("fim", new Date().toISOString())
     .order("inicio");
   if (limite) query = query.limit(limite);

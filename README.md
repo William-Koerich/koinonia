@@ -192,6 +192,7 @@ Para criar uma nova migration: `npx supabase migration new <nome>`. Depois de ap
 | `…2410_visitantes_acompanhamento` | acompanhamento de visitantes (situação, responsável, contatos), vínculo com o perfil criado ("tornar membro") e resumo diário para a liderança (`koinonia_visitantes_gerar_resumo()`, horário em `koinonia_notificacao_config`) |
 | `…2500_cantina_visitantes` | equipe da cantina vê o nome dos visitantes cadastrados na data da cantina |
 | `…2600_cantina_visitantes_confirmados` | equipe marca quais visitantes pegaram a cantina (`koinonia_cantina_confirmar_visitante`) |
+| `…2700_eventos_imagem` | imagem opcional do evento (cartaz/arte), no bucket `koinonia-site`, pasta `eventos/`; liberada para o site público |
 | `…2000_escala_confirmacao_trocas` | escala: confirmação/recusa de cada escalado, indisponibilidades, pedidos de troca (substituto aceita, liderança aprova), ensaio e repertório; lembrete diário pula quem recusou |
 
 ### Seed

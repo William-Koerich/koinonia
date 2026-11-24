@@ -1,8 +1,10 @@
 import { ArrowRightIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { PUBLICO_LABEL } from "@/components/site/evento-card";
 import type { EventoPublico } from "@/lib/data/site";
 import { formatarHora, formatarValorEvento, LOCALE, TIME_ZONE } from "@/lib/format";
+import { urlDoStorage } from "@/lib/storage";
 import { Stagger, StaggerItem } from "./fx/reveal";
 
 const dia = new Intl.DateTimeFormat(LOCALE, { day: "2-digit", timeZone: TIME_ZONE });
@@ -15,6 +17,7 @@ export function ListaEventos({ eventos, detalhada = false }: { eventos: EventoPu
     <Stagger className="border-t border-border">
       {eventos.map((e) => {
         const inicio = new Date(e.inicio);
+        const imagem = detalhada ? urlDoStorage(e.imagem_path) : null;
         return (
           <StaggerItem key={e.id}>
             <article className="grid grid-cols-[4.5rem_1fr] gap-5 border-b border-border py-8 sm:grid-cols-[6rem_1fr_auto] sm:items-center sm:gap-8">
@@ -30,6 +33,11 @@ export function ListaEventos({ eventos, detalhada = false }: { eventos: EventoPu
                   {semana.format(inicio)}, {formatarHora(e.inicio)} · {e.logradouro}, {e.numero} — {e.bairro}
                 </p>
                 {detalhada && e.descricao && <p className="mt-3 max-w-2xl text-muted-foreground">{e.descricao}</p>}
+                {imagem && (
+                  <div className="relative mt-5 aspect-video max-w-xl overflow-hidden rounded-xl bg-muted">
+                    <Image src={imagem} alt={`Arte do evento ${e.titulo}`} fill sizes="(min-width: 640px) 36rem, 100vw" className="object-cover" />
+                  </div>
+                )}
               </div>
               <div className="col-start-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm sm:col-start-auto sm:flex-col sm:items-end">
                 <p>

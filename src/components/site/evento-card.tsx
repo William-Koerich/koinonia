@@ -1,7 +1,9 @@
 import { CalendarIcon, MapPinIcon, UserIcon } from "lucide-react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { EventoPublico } from "@/lib/data/site";
+import { urlDoStorage } from "@/lib/storage";
 import { formatarDataLonga, formatarHora, formatarValorEvento } from "@/lib/format";
 import type { Enums } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -40,9 +42,15 @@ export function EventoCard({
   ]
     .filter(Boolean)
     .join(" · ");
+  const imagem = urlDoStorage(evento.imagem_path);
 
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={cn("h-full", imagem && "overflow-hidden pt-0", className)}>
+      {imagem && (
+        <div className="relative aspect-video bg-muted">
+          <Image src={imagem} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+        </div>
+      )}
       <CardHeader>
         <div className="flex flex-wrap gap-2">
           <Badge variant={evento.valor === null ? "secondary" : "outline"}>

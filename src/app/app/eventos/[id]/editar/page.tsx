@@ -42,6 +42,7 @@ export default async function EditarEventoPage({ params }: PageProps<"/app/event
               pix_chave: evento.pix_chave ?? "",
               pix_tipo: evento.pix_tipo ?? "",
               pix_recebedor: evento.pix_recebedor ?? "",
+              imagem_path: evento.imagem_path,
               cep: evento.cep,
               logradouro: evento.logradouro,
               numero: evento.numero,

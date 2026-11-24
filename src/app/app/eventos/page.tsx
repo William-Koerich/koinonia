@@ -15,7 +15,7 @@ import { excluirEvento } from "./actions";
 export const metadata: Metadata = { title: "Eventos" };
 
 const CAMPOS =
-  "id, titulo, descricao, inicio, fim, valor, publico, logradouro, numero, complemento, bairro, cidade, uf, responsavel:koinonia_perfis_basicos!koinonia_eventos_responsavel_id_fkey(nome_completo)";
+  "id, titulo, descricao, inicio, fim, valor, publico, logradouro, numero, complemento, bairro, cidade, uf, imagem_path, responsavel:koinonia_perfis_basicos!koinonia_eventos_responsavel_id_fkey(nome_completo)";
 
 export default async function EventosPage() {
   const profile = await requireProfile();

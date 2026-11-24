@@ -83,7 +83,7 @@ export default async function EventoPage({ params }: PageProps<"/app/eventos/[id
     supabase
       .from("koinonia_eventos")
       .select(
-        "id, titulo, descricao, inicio, fim, valor, vagas, publico, logradouro, numero, complemento, bairro, cidade, uf, responsavel_id, pix_chave, pix_tipo, pix_recebedor, responsavel:koinonia_perfis_basicos!koinonia_eventos_responsavel_id_fkey(nome_completo)",
+        "id, titulo, descricao, inicio, fim, valor, vagas, publico, logradouro, numero, complemento, bairro, cidade, uf, imagem_path, responsavel_id, pix_chave, pix_tipo, pix_recebedor, responsavel:koinonia_perfis_basicos!koinonia_eventos_responsavel_id_fkey(nome_completo)",
       )
       .eq("id", id)
       .maybeSingle(),

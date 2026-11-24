@@ -84,6 +84,7 @@ values ('99999999-0000-4000-a000-000000000002', current_date + 3, 'Escala Teste'
 \echo '== Visitante (anon)'
 set local role anon;
 select koinonia_teste_ok((select count(*) from koinonia_eventos) > 0, 'vê eventos no site');
+select koinonia_teste_ok((select count(imagem_path) >= 0 from koinonia_eventos), 'vê a imagem dos eventos no site');
 select koinonia_teste_ok((select count(*) >= 0 from koinonia_pastores), 'vê pastores no site');
 select koinonia_teste_bloqueia('select 1 from koinonia_profiles', 'não lê perfis');
 select koinonia_teste_bloqueia('select 1 from koinonia_gcs', 'não lê GCs');

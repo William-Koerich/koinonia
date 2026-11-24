@@ -8,6 +8,7 @@ import { TAGS } from "@/lib/cache-tags";
 import { erroValidacao, mensagemErroBanco } from "@/lib/errors";
 import { flash } from "@/lib/flash";
 import { formatarDataHora } from "@/lib/format";
+import { STORAGE_BUCKET } from "@/lib/storage";
 import { dispararPendentes, notificarCriacao } from "@/lib/notificacoes";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/types";
@@ -20,10 +21,18 @@ export async function salvarEvento(id: string | null, input: EventoInput): Promi
   if (!parsed.success) return erroValidacao(parsed.error);
 
   const supabase = await createClient();
+  const imagemAntiga = id
+    ? ((await supabase.from("koinonia_eventos").select("imagem_path").eq("id", id).maybeSingle()).data?.imagem_path ?? null)
+    : null;
   const { data: salvo, error } = id
     ? await supabase.from("koinonia_eventos").update(parsed.data).eq("id", id).select("id").single()
     : await supabase.from("koinonia_eventos").insert(parsed.data).select("id").single();
   if (error) return { ok: false, error: mensagemErroBanco(error) };
+
+  // a imagem trocada ou retirada sai do bucket (falha aqui não impede o salvamento)
+  if (imagemAntiga && imagemAntiga !== parsed.data.imagem_path) {
+    await supabase.storage.from(STORAGE_BUCKET).remove([imagemAntiga]);
+  }
 
   if (!id) {
     const e = parsed.data;
@@ -50,8 +59,9 @@ export async function excluirEvento(id: string): Promise<ActionResult> {
   if (!(await autorizar("ADMIN", "PASTOR"))) return { ok: false, error: SEM_PERMISSAO };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("koinonia_eventos").delete().eq("id", id);
+  const { data, error } = await supabase.from("koinonia_eventos").delete().eq("id", id).select("imagem_path").maybeSingle();
   if (error) return { ok: false, error: mensagemErroBanco(error) };
+  if (data?.imagem_path) await supabase.storage.from(STORAGE_BUCKET).remove([data.imagem_path]);
 
   updateTag(TAGS.eventos);
   revalidatePath("/app/eventos");

@@ -39,6 +39,11 @@ export const eventoSchema = enderecoSchema
       .enum(["", "cnpj", "cpf", "email", "telefone", "aleatoria"])
       .transform((v) => (v === "" ? null : v)),
     pix_recebedor: textoOpcional(25),
+    // cartaz/arte do evento no bucket do site (opcional)
+    imagem_path: z
+      .string()
+      .nullable()
+      .transform((v) => v || null),
   })
   .refine((e) => new Date(e.fim) > new Date(e.inicio), {
     message: "O término deve ser depois do início.",
@@ -61,4 +66,5 @@ export const EVENTO_VAZIO: EventoInput = {
   pix_chave: "",
   pix_tipo: "",
   pix_recebedor: "",
+  imagem_path: null,
 };

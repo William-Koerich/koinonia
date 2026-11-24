@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Controller, FormProvider } from "react-hook-form";
 import { EnderecoFields } from "@/components/forms/endereco-fields";
+import { ImagemUpload } from "@/components/forms/imagem-upload";
 import { MoedaInput } from "@/components/forms/moeda-input";
 import { PessoaCombobox, type PessoaOpcao } from "@/components/forms/pessoa-combobox";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -54,6 +55,18 @@ export function EventoForm({
             <FieldLabel htmlFor="descricao">Descrição</FieldLabel>
             <Textarea id="descricao" rows={3} placeholder="Opcional" {...form.register("descricao")} />
             <FieldError errors={[errors.descricao]} />
+          </Field>
+
+          <Field>
+            <FieldLabel>Imagem</FieldLabel>
+            <Controller
+              control={form.control}
+              name="imagem_path"
+              render={({ field }) => (
+                <ImagemUpload pasta="eventos" proporcao="aspect-video" value={field.value} onChange={field.onChange} />
+              )}
+            />
+            <FieldDescription>Opcional: cartaz ou arte de divulgação. Horizontal, JPG, PNG ou WebP até 5 MB.</FieldDescription>
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
