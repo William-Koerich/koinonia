@@ -5,7 +5,10 @@ export const siteConfig = {
   /** Frase-tema da igreja (título da home) */
   tema: "Quem serve vê Deus",
   descricao: "Uma comunidade de fé, comunhão e serviço em Blumenau.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  /** Endereço oficial: links de e-mail, QR Codes, sitemap e Open Graph sempre apontam para ele */
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.NODE_ENV === "production" ? "https://www.igrejakoinonia.com.br" : "http://localhost:3000"),
   fundacao: 2010,
   versiculo: {
     texto: "Pois nem mesmo o Filho do Homem veio para ser servido, mas para servir.",

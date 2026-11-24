@@ -1,6 +1,5 @@
 import { ArrowLeftIcon, DownloadIcon, PencilIcon, ScanLineIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
@@ -71,10 +70,7 @@ async function dadosPix(valor: number, evento: PixEvento): Promise<DadosPix | nu
  * na porta (abre a tela já registrando a presença).
  */
 async function qrCheckin(eventoId: string, codigo: string) {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const origem = host ? `${h.get("x-forwarded-proto") ?? "https"}://${host}` : siteConfig.url;
-  const url = `${origem}/app/eventos/${eventoId}/checkin?codigo=${codigo}`;
+  const url = `${siteConfig.url}/app/eventos/${eventoId}/checkin?codigo=${codigo}`;
   return QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M" });
 }
 

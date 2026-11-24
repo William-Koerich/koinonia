@@ -315,8 +315,8 @@ Helpers SQL (`security definer`): `koinonia_current_user_role()`, `koinonia_is_a
 ## Deploy na Vercel
 
 1. Importe o repositório na Vercel (framework detectado: Next.js).
-2. Em *Settings → Environment Variables*, cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SITE_URL` (ex.: `https://www.suaigreja.com.br`), `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` e `CRON_SECRET`. `DATABASE_URL` **não** é necessária no deploy.
-3. No Supabase, em *Authentication → URL Configuration → Redirect URLs*, adicione `https://www.suaigreja.com.br/**` (e `http://localhost:3000/**` para desenvolvimento). Sem isso o link de recuperação de senha não volta para o site.
+2. Em *Settings → Environment Variables*, cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SITE_URL` (`https://www.igrejakoinonia.com.br`; sem ela, a produção já usa esse domínio), `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` e `CRON_SECRET`. `DATABASE_URL` **não** é necessária no deploy.
+3. No Supabase, em *Authentication → URL Configuration → Redirect URLs*, adicione `https://www.igrejakoinonia.com.br/**` (e `http://localhost:3000/**` para desenvolvimento). Sem isso o link de recuperação de senha não volta para o site. Os links de e-mail e os QR Codes de check-in usam sempre o domínio oficial (`siteConfig.url`), mesmo quando o site é aberto pelo endereço da Vercel.
    > O *Site URL* do projeto é compartilhado com os outros apps — não altere; use só as Redirect URLs.
 4. Aplique as migrations pendentes no banco **antes** de publicar uma versão que dependa delas.
 5. Faça o deploy. As imagens do Storage já estão liberadas no `next.config.ts` a partir de `NEXT_PUBLIC_SUPABASE_URL`.

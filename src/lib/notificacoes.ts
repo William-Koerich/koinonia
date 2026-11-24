@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import webpush from "web-push";
+import { siteConfig } from "@/config/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -16,7 +17,7 @@ function configurar(): boolean {
   const publica = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privada = process.env.VAPID_PRIVATE_KEY;
   if (!publica || !privada) return false;
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "https://igrejakoinoniablumenau.vercel.app", publica, privada);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? siteConfig.url, publica, privada);
   configurado = true;
   return true;
 }
